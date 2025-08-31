@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="panel">
+    <form method="post" action="/load" class="url-form">
+      <label for="report_url">URL du report Warcraft Logs</label>
+      <input type="url" id="report_url" name="report_url" placeholder="https://www.warcraftlogs.com/reports/..." required>
+      <button type="submit">Charger</button>
+    </form>
+    <div class="note">Mode API v1 (clé). Aucune connexion requise.</div>
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+  </section>
+
+  {% if players %}
+  <section class="panel">
+    <div class="meta">
+      <div><strong>Report:</strong> <code>{{ report_code }}</code></div>
+      <div><strong>Fight:</strong> <code>{{ fight_id }}</code></div>
+      {% if fight_minutes is not none %}
+      <div><strong>Durée:</strong> {{ '%.2f'|format(fight_minutes) }} min</div>
+      {% endif %}
+      <div id="selected-healer" class="note">Sélectionnez un joueur (healer) pour analyser les casts → CPM par cible.</div>
+    </div>
+
+    <div id="raid-grid" class="raid-grid" data-report-key="{{ report_code }}::{{ fight_id }}" data-report-code="{{ report_code }}" data-fight-id="{{ fight_id }}">
+      {% for p in players %}
+      <div class="raid-card" data-id="{{ p.id }}" data-name="{{ p.name }}">
+        <div class="name">{{ p.name }}</div>
+        <div class="cpm"><span class="cpm-value" data-id="{{ p.id }}">0.000</span> CPM</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div id="status" class="status"></div>
+  </section>
+  {% endif %}
+{% endblock %}

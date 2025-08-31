@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# Virtual env / uv
+.venv/
+.uv/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Local env
+.env
+
