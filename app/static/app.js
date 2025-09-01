@@ -51,16 +51,20 @@
     grid.addEventListener('dragover', (e) => {
       if (!draggingCard) return;
       e.preventDefault();
-      const target = cardFromPoint(e.clientX, e.clientY, draggingCard);
-      if (!target) {
-        grid.appendChild(draggingCard);
-        return;
-      }
-      if (target === draggingCard) return;
+      const target = nearestCard(grid, e.clientX, e.clientY, draggingCard);
+      if (!target) return; // nothing to do
       const rect = target.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      const before = (e.clientY < cy) || (Math.abs(e.clientY - cy) < rect.height * 0.4 && e.clientX < cx);
+      // Decide insertion side: primarily vertical, fallback horizontal when near middle
+      let before;
+      const dy = e.clientY - cy;
+      const dx = e.clientX - cx;
+      if (Math.abs(dy) > rect.height * 0.25) {
+        before = dy < 0;
+      } else {
+        before = dx < 0;
+      }
       if (before) grid.insertBefore(draggingCard, target);
       else grid.insertBefore(draggingCard, target.nextSibling);
     });
@@ -76,13 +80,21 @@
     });
   }
 
-  function cardFromPoint(x, y, dragging) {
-    const els = document.elementsFromPoint(x, y);
-    for (const el of els) {
-      const card = el.closest && el.closest('.raid-card');
-      if (card && card !== dragging) return card;
+  function nearestCard(container, x, y, dragging) {
+    const cards = [...container.querySelectorAll('.raid-card:not(.dragging)')];
+    if (cards.length === 0) return null;
+    let best = null;
+    let bestD2 = Infinity;
+    for (const c of cards) {
+      const r = c.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = x - cx;
+      const dy = y - cy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < bestD2) { bestD2 = d2; best = c; }
     }
-    return null;
+    return best;
   }
 
   function cpmToColor(value, min, max) {
