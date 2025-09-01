@@ -149,7 +149,7 @@ async def api_cpm(
         paf = await _client_v1(request).get_players_and_fight(code, fight_id)
         counts = await _client_v1(request).get_cast_counts_by_target(code, paf.fight, source_id)
     except WCLV1APIError as e:
-        raise HTTPException(status_code=502, detail=str(e))
+        raise HTTPException(status_code=502, detail=str(e)) from e
 
     minutes = fight_minutes(paf.fight.startTime, paf.fight.endTime)
     cpm_map = compute_cpm(counts, [p.id for p in paf.players], minutes)

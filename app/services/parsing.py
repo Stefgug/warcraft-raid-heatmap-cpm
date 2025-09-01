@@ -23,8 +23,8 @@ def parse_report_url(url: str) -> tuple[str, int]:
     try:
         reports_idx = path_parts.index("reports")
         code = path_parts[reports_idx + 1]
-    except (ValueError, IndexError):
-        raise ParseError("Code de report introuvable dans l'URL fournie")
+    except (ValueError, IndexError) as e:
+        raise ParseError("Code de report introuvable dans l'URL fournie") from e
 
     if not code:
         raise ParseError("Code de report manquant")
@@ -40,4 +40,3 @@ def parse_report_url(url: str) -> tuple[str, int]:
         raise ParseError("Paramètre fight invalide (entier attendu)") from e
 
     return code, fight_id
-
