@@ -31,7 +31,7 @@
 
   // Improved grid-friendly drag-and-drop using nearest-card placement
   function setupDnD(grid, reportCode, fightId) {
-    // Prefer SortableJS if available for more robust HTML5 DnD
+    // Prefer SortableJS if available for more robust DnD
     if (typeof window !== 'undefined' && window.Sortable && typeof window.Sortable.create === 'function') {
       window.Sortable.create(grid, {
         animation: 150,
@@ -45,47 +45,50 @@
       return;
     }
 
-    // Fallback: basic nearest-card algorithm with native DnD
-    let draggingCard = null;
-    const attachCardDnD = (card) => {
-      card.addEventListener('dragstart', (e) => {
-        draggingCard = card;
-        card.classList.add('dragging');
-        if (e.dataTransfer) {
-          e.dataTransfer.effectAllowed = 'move';
-          try { e.dataTransfer.setData('text/plain', card.dataset.id || 'card'); } catch (_) {}
-        }
-      });
-      card.addEventListener('dragend', () => {
-        if (!draggingCard) return;
-        draggingCard.classList.remove('dragging');
-        draggingCard = null;
-        const order = Array.from(grid.children).map((el) => parseInt(el.dataset.id, 10));
-        saveOrder(reportCode, fightId, order);
-      });
-    };
-    grid.querySelectorAll('.raid-card').forEach(attachCardDnD);
+    // Pointer-based fallback (no HTML5 DnD)
+    let active = null;
+    let startX = 0, startY = 0;
+    let moved = false;
 
-    grid.addEventListener('dragover', (e) => {
-      if (!draggingCard) return;
+    grid.addEventListener('pointerdown', (e) => {
+      const card = e.target.closest('.raid-card');
+      if (!card) return;
+      active = card;
+      moved = false;
+      startX = e.clientX; startY = e.clientY;
+      card.classList.add('manual-drag');
       e.preventDefault();
-      const target = nearestCard(grid, e.clientX, e.clientY, draggingCard);
-      if (!target || target === draggingCard) return;
+    });
+
+    grid.addEventListener('pointermove', (e) => {
+      if (!active) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if (!moved && Math.hypot(dx, dy) < 3) return;
+      moved = true;
+      const target = nearestCard(grid, e.clientX, e.clientY, active);
+      if (!target || target === active) return;
       const rect = target.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      const dy = e.clientY - cy;
-      const dx = e.clientX - cx;
-      const before = Math.abs(dy) > rect.height * 0.25 ? dy < 0 : dx < 0;
-      if (before) grid.insertBefore(draggingCard, target);
-      else grid.insertBefore(draggingCard, target.nextSibling);
+      const before = Math.abs(e.clientY - cy) > rect.height * 0.25 ? (e.clientY < cy) : (e.clientX < cx);
+      if (before) grid.insertBefore(active, target);
+      else grid.insertBefore(active, target.nextSibling);
     });
 
-    grid.addEventListener('drop', (e) => { if (draggingCard) e.preventDefault(); });
+    const finish = () => {
+      if (!active) return;
+      active.classList.remove('manual-drag');
+      active = null;
+      const order = Array.from(grid.children).map((el) => parseInt(el.dataset.id, 10));
+      saveOrder(reportCode, fightId, order);
+    };
+    grid.addEventListener('pointerup', finish);
+    grid.addEventListener('pointercancel', finish);
+    grid.addEventListener('mouseleave', () => { if (active) finish(); });
   }
 
   function nearestCard(container, x, y, dragging) {
-    const cards = [...container.querySelectorAll('.raid-card:not(.dragging)')];
+    const cards = [...container.querySelectorAll('.raid-card:not(.dragging):not(.manual-drag)')];
     if (cards.length === 0) return null;
     let best = null;
     let bestD2 = Infinity;

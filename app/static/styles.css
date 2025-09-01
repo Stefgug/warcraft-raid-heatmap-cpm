@@ -30,8 +30,8 @@ h1 { margin: 8px 0 4px; font-size: 20px; }
 .raid-card.selected { outline: 2px solid #f59e0b; }
 
 
-.raid-card[draggable="true"] { cursor: grab; }
-.raid-card[draggable="true"]:active { cursor: grabbing; }
+.raid-card { cursor: grab; }
+.raid-card:active { cursor: grabbing; }
 
 .raid-card .row { display: none; }
 .raid-card { color: #fff; }
@@ -39,6 +39,7 @@ h1 { margin: 8px 0 4px; font-size: 20px; }
 .raid-card .value { position: absolute; right: 14px; top: 10px; font-size: 26px; font-weight: 900; letter-spacing: 0.3px; }
 .raid-card .cpm-value { color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9); }
 .raid-card.dragging { opacity: 0.6; pointer-events: none; transform: scale(0.98); }
+.raid-card.manual-drag { opacity: 0.6; transform: scale(0.98); }
 
 @media (max-width: 900px) {
   .raid-grid { grid-template-columns: repeat(5, 1fr); }

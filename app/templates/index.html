@@ -21,23 +21,23 @@
       <div><strong>Durée:</strong> {{ '%.2f'|format(fight_minutes) }} min</div>
       {% endif %}
       <div class="healer-picker">
-        <label for="healer-select"><strong>Healer:</strong></label>
+        <label for="healer-select"><strong>Joueur:</strong></label>
         <select id="healer-select">
           {% if healers and healers|length > 0 %}
             {% for h in healers %}
               <option value="{{ h.id }}">{{ h.name }}</option>
             {% endfor %}
           {% else %}
-            <option value="" disabled selected>Aucun healer détecté</option>
+            <option value="" disabled selected>Aucun joueur détecté</option>
           {% endif %}
         </select>
       </div>
-      <div id="selected-healer" class="note">Utilisez la liste ci‑dessus pour choisir le healer à analyser.</div>
+      <div id="selected-healer" class="note">Utilisez la liste ci‑dessus pour choisir le joueur à analyser.</div>
     </div>
 
     <div id="raid-grid" class="raid-grid" data-report-key="{{ report_code }}::{{ fight_id }}" data-report-code="{{ report_code }}" data-fight-id="{{ fight_id }}" {% if preselect_source %}data-preselect-source="{{ preselect_source }}"{% endif %}>
       {% for p in players %}
-      <div class="raid-card" data-id="{{ p.id }}" data-name="{{ p.name }}" draggable="true">
+      <div class="raid-card" data-id="{{ p.id }}" data-name="{{ p.name }}">
         <div class="value"><span class="cpm-value" data-id="{{ p.id }}">0.000</span></div>
         <div class="name" title="{{ p.name }}">{{ p.name }}</div>
       </div>
