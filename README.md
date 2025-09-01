@@ -1,3 +1,14 @@
+---
+title: WCL Raid Heatmap (CPM)
+emoji: 🗺️
+colorFrom: blue
+colorTo: red
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+---
+
 # Warcraft Raid Heatmap (CPM)
 
 Application FastAPI minimale pour analyser un report Warcraft Logs (API v1) et afficher des raid frames colorées par CPM (casts par minute reçus d'un healer sélectionné). Roster strictement limité aux participants du combat sélectionné (pas de NPC/pets). Les cartes sont entièrement colorées selon l’intensité (meilleure lisibilité), et l’ordre peut être modifié par glisser‑déposer via une petite poignée.
