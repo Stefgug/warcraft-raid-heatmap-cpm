@@ -31,16 +31,28 @@
 
   // Improved grid-friendly drag-and-drop using nearest-card placement
   function setupDnD(grid, reportCode, fightId) {
-    let draggingCard = null;
+    // Prefer SortableJS if available for more robust HTML5 DnD
+    if (typeof window !== 'undefined' && window.Sortable && typeof window.Sortable.create === 'function') {
+      window.Sortable.create(grid, {
+        animation: 150,
+        draggable: '.raid-card',
+        ghostClass: 'dragging',
+        onSort: () => {
+          const order = Array.from(grid.children).map((el) => parseInt(el.dataset.id, 10));
+          saveOrder(reportCode, fightId, order);
+        },
+      });
+      return;
+    }
 
-    // Attach dragstart/end to each card (some browsers don't bubble dragstart reliably)
+    // Fallback: basic nearest-card algorithm with native DnD
+    let draggingCard = null;
     const attachCardDnD = (card) => {
       card.addEventListener('dragstart', (e) => {
         draggingCard = card;
         card.classList.add('dragging');
         if (e.dataTransfer) {
           e.dataTransfer.effectAllowed = 'move';
-          // Some browsers require non-empty data to initiate DnD
           try { e.dataTransfer.setData('text/plain', card.dataset.id || 'card'); } catch (_) {}
         }
       });
@@ -58,19 +70,13 @@
       if (!draggingCard) return;
       e.preventDefault();
       const target = nearestCard(grid, e.clientX, e.clientY, draggingCard);
-      if (!target) return; // nothing to do
+      if (!target || target === draggingCard) return;
       const rect = target.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      // Decide insertion side: primarily vertical, fallback horizontal when near middle
-      let before;
       const dy = e.clientY - cy;
       const dx = e.clientX - cx;
-      if (Math.abs(dy) > rect.height * 0.25) {
-        before = dy < 0;
-      } else {
-        before = dx < 0;
-      }
+      const before = Math.abs(dy) > rect.height * 0.25 ? dy < 0 : dx < 0;
       if (before) grid.insertBefore(draggingCard, target);
       else grid.insertBefore(draggingCard, target.nextSibling);
     });

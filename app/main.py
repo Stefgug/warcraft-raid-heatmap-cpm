@@ -121,12 +121,18 @@ async def load_report(request: Request, report_url: str = Form(...)):
             preselect_source = None
 
     # Compute healer candidates for dropdown
-    healer_ids: list[int] = []
-    try:
-        healer_ids = await _client_v1(request).get_healer_ids(code, paf.fight)
-    except WCLV1APIError:
-        healer_ids = []
-    healers = [p for p in paf.players if p.id in set(healer_ids)]
+    # 1) Prefer spec information from players list when available
+    HEALER_SPECS = {"holy", "discipline", "restoration", "mistweaver", "preservation"}
+    healers = [p for p in paf.players if p.subType and p.subType.strip().lower() in HEALER_SPECS]
+    # 2) Fallback to healing tables if none found (handles cases where spec is missing)
+    if not healers:
+        healer_ids: list[int] = []
+        try:
+            healer_ids = await _client_v1(request).get_healer_ids(code, paf.fight)
+        except WCLV1APIError:
+            healer_ids = []
+        if healer_ids:
+            healers = [p for p in paf.players if p.id in set(healer_ids)]
 
     return templates.TemplateResponse(
         "index.html",
