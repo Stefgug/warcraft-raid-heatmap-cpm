@@ -23,21 +23,20 @@ jobs:
 
       - name: Sync deps
         run: uv sync
-        working-directory: .
+        working-directory: warcraft-raid-heatmap
 
       - name: Ruff
         run: uv run ruff check .
-        working-directory: .
+        working-directory: warcraft-raid-heatmap
 
       - name: Black
         run: uv run black --check .
-        working-directory: .
+        working-directory: warcraft-raid-heatmap
 
       - name: Mypy
         run: uv run mypy .
-        working-directory: .
+        working-directory: warcraft-raid-heatmap
 
       - name: Pytest
         run: uv run pytest -q
         working-directory: warcraft-raid-heatmap
-
