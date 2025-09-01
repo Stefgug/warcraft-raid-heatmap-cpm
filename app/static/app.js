@@ -105,13 +105,27 @@
   }
 
   function cpmToColor(value, min, max) {
-    if (!isFinite(value) || value <= 0 || max <= 0 || max === min) {
-      return "#9aa9ff"; // neutral-ish
-    }
-    const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
-    const r = Math.round(255 * t);
-    const b = Math.round(255 * (1 - t));
-    return `rgb(${r},0,${b})`;
+    if (!isFinite(value) || max <= 0 || max === min) return "#9aa9ff";
+    const raw = Math.max(0, Math.min(1, (value - min) / (max - min)));
+    // Gamma to boost contrast between close values while keeping bright highs
+    const gamma = 0.6; // < 1 expands lower range differences
+    const t = Math.pow(raw, gamma);
+    // Multi-stop gradient: blue -> teal -> light green -> orange -> red
+    const stops = [
+      [44, 123, 182],  // blue
+      [0, 204, 188],    // teal
+      [144, 235, 157],  // light green
+      [249, 166, 2],    // orange
+      [215, 25, 28],    // red
+    ];
+    const seg = (stops.length - 1) * t;
+    const i = Math.max(0, Math.min(stops.length - 2, Math.floor(seg)));
+    const f = seg - i;
+    const c1 = stops[i], c2 = stops[i + 1];
+    const r = Math.round(c1[0] + (c2[0] - c1[0]) * f);
+    const g = Math.round(c1[1] + (c2[1] - c1[1]) * f);
+    const b = Math.round(c1[2] + (c2[2] - c1[2]) * f);
+    return `rgb(${r},${g},${b})`;
   }
 
   function selectCard(card) {
