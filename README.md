@@ -1,6 +1,6 @@
 # Warcraft Raid Heatmap (CPM)
 
-Application FastAPI minimale pour analyser un report Warcraft Logs (API v1) et afficher des raid frames colorées par CPM (casts par minute reçus d'un healer sélectionné). Roster strictement limité aux participants du combat sélectionné (pas de NPC/pets).
+Application FastAPI minimale pour analyser un report Warcraft Logs (API v1) et afficher des raid frames colorées par CPM (casts par minute reçus d'un healer sélectionné). Roster strictement limité aux participants du combat sélectionné (pas de NPC/pets). Les cartes sont entièrement colorées selon l’intensité (meilleure lisibilité), et l’ordre peut être modifié par glisser‑déposer via une petite poignée.
 
 ## Prérequis
 - Python 3.12.9
@@ -41,15 +41,10 @@ https://www.warcraftlogs.com/reports/Dfrtw1FVPXm68L7C?fight=17&type=healing
 - Étape B: L’app affiche les joueurs du fight seulement (5 par ligne).
 - Étape C: Cliquer un joueur (healer) pour le sélectionner; la heatmap se met à jour.
 - Étape D: Optionnel — si l’URL contient `source=ID`, ce joueur est pré‑sélectionné automatiquement.
+- Étape E: Réordonner les cartes en faisant glisser la poignée `≡` en haut‑gauche de chaque carte. Le clic sur la carte sert à la sélection; la poignée sert au déplacement.
 
-## Drag-and-drop (optionnel)
-Le drag-and-drop des cartes est optionnel. Pour éviter les erreurs de CDN, il est désactivé par défaut.
-
-Deux options:
-- Utiliser un CDN fiable et ajouter SortableJS dans `app/templates/base.html`.
-- Ou bien déposer `sortable.min.js` dans `app/static/vendor/` et inclure le script local.
-
-Si SortableJS est présent, l’ordre est persisté côté navigateur via `localStorage`.
+## Drag-and-drop
+Le glisser‑déposer est natif (pas de dépendance externe) et fonctionne via une poignée dédiée, afin d’éviter les conflits avec le clic de sélection. L’ordre est persisté côté navigateur via `localStorage` (par report + fight).
 
 ## Qualité & scripts
 

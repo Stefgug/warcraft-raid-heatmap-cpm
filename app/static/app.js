@@ -29,6 +29,63 @@
     });
   }
 
+  // Simple local drag-and-drop using a small handle inside each card
+  function setupDnD(grid, reportCode, fightId) {
+    let draggingCard = null;
+
+    // Suppress click selection when starting a drag on the handle
+    grid.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.drag-handle')) {
+        e.stopPropagation();
+      }
+    }, { capture: true });
+
+    grid.addEventListener('dragstart', (e) => {
+      const handle = e.target.closest('.drag-handle');
+      if (!handle) return;
+      const card = handle.closest('.raid-card');
+      if (!card) return;
+      draggingCard = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.dataset.id || '');
+    });
+
+    grid.addEventListener('dragover', (e) => {
+      if (!draggingCard) return;
+      e.preventDefault();
+      const after = getDragAfterElement(grid, e.clientY);
+      if (after == null) grid.appendChild(draggingCard);
+      else grid.insertBefore(draggingCard, after);
+    });
+
+    grid.addEventListener('drop', (e) => {
+      if (!draggingCard) return;
+      e.preventDefault();
+    });
+
+    grid.addEventListener('dragend', () => {
+      if (!draggingCard) return;
+      draggingCard.classList.remove('dragging');
+      draggingCard = null;
+      const order = Array.from(grid.children).map((el) => parseInt(el.dataset.id, 10));
+      saveOrder(reportCode, fightId, order);
+    });
+  }
+
+  function getDragAfterElement(container, y) {
+    const els = [...container.querySelectorAll('.raid-card:not(.dragging)')];
+    let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+    for (const el of els) {
+      const box = el.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        closest = { offset, element: el };
+      }
+    }
+    return closest.element;
+  }
+
   function cpmToColor(value, min, max) {
     if (!isFinite(value) || value <= 0 || max <= 0 || max === min) {
       return "#9aa9ff"; // neutral-ish
@@ -63,7 +120,10 @@
       const sel = document.querySelector(`.cpm-value[data-id="${item.id}"]`);
       if (!sel) return;
       sel.textContent = (item.value || 0).toFixed(3);
-      sel.style.backgroundColor = cpmToColor(item.value || 0, min, max);
+      const card = sel.closest('.raid-card');
+      if (card) {
+        card.style.backgroundColor = cpmToColor(item.value || 0, min, max);
+      }
     });
   }
 
@@ -79,25 +139,12 @@
     // Restore order
     applyOrder(grid, loadOrder(reportCode, fightId));
 
-    // SortableJS (optional). If unavailable, skip gracefully.
-    try {
-      if (typeof window !== 'undefined' && window.Sortable) {
-        if (typeof window.Sortable.create === 'function') {
-          window.Sortable.create(grid, {
-            animation: 150,
-            onSort: () => {
-              const order = Array.from(grid.children).map((el) => parseInt(el.dataset.id, 10));
-              saveOrder(reportCode, fightId, order);
-            },
-          });
-        }
-      }
-    } catch (e) {
-      console.warn('Sortable unavailable, drag-and-drop disabled.', e);
-    }
+    // Local DnD with handle
+    setupDnD(grid, reportCode, fightId);
 
-    // Click to select healer
+    // Click to select healer (ignore handle)
     grid.addEventListener('click', async (e) => {
+      if (e.target.closest('.drag-handle')) return;
       const card = e.target.closest('.raid-card');
       if (!card) return;
       selectCard(card);
