@@ -62,3 +62,15 @@ uv run pytest -q
 
 ## License
 MIT
+ 
+## Déploiement rapide (gratuit)
+
+- Hugging Face Spaces (Docker):
+  - Le repo contient `Dockerfile` et `requirements.txt` à la racine.
+  - Créez un Space (type Docker), connectez ce repo.
+  - Ajoutez le secret `WCL_V1_API_KEY` (et éventuellement `WCL_BASE`).
+  - Le service démarre sur `$PORT` automatiquement.
+
+- Render / Railway:
+  - Construire depuis `Dockerfile` ou bien utiliser: build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+  - Définir `WCL_V1_API_KEY` dans les variables d’environnement.

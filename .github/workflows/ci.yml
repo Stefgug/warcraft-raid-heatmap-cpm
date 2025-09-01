@@ -9,14 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: warcraft-raid-heatmap
     steps:
-      - name: Checkout (into subdir)
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: warcraft-raid-heatmap
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,7 +23,7 @@ jobs:
 
       - name: Sync deps
         run: uv sync
-
+        
       - name: Ruff
         run: uv run ruff check .
 
