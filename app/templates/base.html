@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Warcraft Raid Heatmap</title>
     <link rel="stylesheet" href="/static/styles.css" />
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
+    <!-- Drag-and-drop is optional; we load Sortable locally later if needed. -->
   </head>
   <body>
     <header>
@@ -14,6 +14,6 @@
     <main>
       {% block content %}{% endblock %}
     </main>
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=20250901a"></script>
   </body>
   </html>

@@ -1,4 +1,5 @@
 (function () {
+  let __initialized = false;
   function keyFor(reportCode, fightId) {
     return `wcl-order:${reportCode}:${fightId}`;
   }
@@ -67,22 +68,33 @@
   }
 
   function init() {
+    if (__initialized) return;
+    __initialized = true;
     const grid = document.getElementById('raid-grid');
     if (!grid) return;
     const reportCode = grid.dataset.reportCode;
     const fightId = parseInt(grid.dataset.fightId, 10);
+    const preselect = grid.dataset.preselectSource ? parseInt(grid.dataset.preselectSource, 10) : null;
 
     // Restore order
     applyOrder(grid, loadOrder(reportCode, fightId));
 
-    // SortableJS
-    Sortable.create(grid, {
-      animation: 150,
-      onSort: () => {
-        const order = Array.from(grid.children).map((el) => parseInt(el.dataset.id, 10));
-        saveOrder(reportCode, fightId, order);
-      },
-    });
+    // SortableJS (optional). If unavailable, skip gracefully.
+    try {
+      if (typeof window !== 'undefined' && window.Sortable) {
+        if (typeof window.Sortable.create === 'function') {
+          window.Sortable.create(grid, {
+            animation: 150,
+            onSort: () => {
+              const order = Array.from(grid.children).map((el) => parseInt(el.dataset.id, 10));
+              saveOrder(reportCode, fightId, order);
+            },
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Sortable unavailable, drag-and-drop disabled.', e);
+    }
 
     // Click to select healer
     grid.addEventListener('click', async (e) => {
@@ -101,8 +113,31 @@
         status.textContent = 'Erreur: ' + (err.message || String(err));
       }
     });
+
+    // If a preselected source id exists, auto-select and fetch
+    if (preselect) {
+      const card = grid.querySelector(`.raid-card[data-id="${preselect}"]`);
+      if (card) {
+        // Simulate a click flow
+        selectCard(card);
+        const status = document.getElementById('status');
+        (async () => {
+          try {
+            status.textContent = 'Calcul CPM en cours…';
+            const data = await fetchCPM(reportCode, fightId, preselect);
+            updateHeatmap(data);
+            status.textContent = 'CPM mis à jour.';
+          } catch (err) {
+            console.error(err);
+            status.textContent = 'Erreur: ' + (err.message || String(err));
+          }
+        })();
+      }
+    }
   }
 
   document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState === 'interactive' || document.readyState === 'complete') {
+    init();
+  }
 })();
-

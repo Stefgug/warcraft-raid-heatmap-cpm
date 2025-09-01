@@ -1,21 +1,21 @@
 # Warcraft Raid Heatmap (CPM)
 
-Application FastAPI (API v1 uniquement) pour analyser un report Warcraft Logs et afficher des raid frames (drag-and-drop) colorées par CPM (casts par minute reçus d'un healer sélectionné).
+Application FastAPI minimale pour analyser un report Warcraft Logs (API v1) et afficher des raid frames colorées par CPM (casts par minute reçus d'un healer sélectionné). Roster strictement limité aux participants du combat sélectionné (pas de NPC/pets).
 
 ## Prérequis
 - Python 3.12.9
 - [uv](https://github.com/astral-sh/uv) (optionnel mais recommandé)
-- Clé API Warcraft Logs v1.
+- Clé API Warcraft Logs v1 (pas d’OAuth requis)
 
 ## Configuration
-Créez un fichier `.env` à la racine du projet:
+Créez un fichier `.env` à la racine du projet (ou utilisez celui déjà présent):
 
 ```
 WCL_V1_API_KEY=your_v1_api_key
 WCL_BASE=https://www.warcraftlogs.com
 ```
 
-Pas besoin d’OAuth/PKCE; seule la clé v1 est nécessaire.
+> Remarque: L’application est volontairement limitée à l’API v1 pour éviter tout flux d’authentification utilisateur.
 
 ## Installation
 
@@ -37,13 +37,19 @@ https://www.warcraftlogs.com/reports/Dfrtw1FVPXm68L7C?fight=17&type=healing
 ```
 
 ## Flux utilisateur
-- Étape A: Coller l’URL → bouton « Charger ».
-- Étape B: L’app récupère les Players et affiche les raid frames (5 par ligne).
-- Étape C: Sélectionner le joueur à analyser (healer).
-- Étape D: L’app requête les casts de ce joueur pendant le fight, calcule le CPM par target et met à jour la heatmap.
-- Étape E: Réorganiser les cartes par drag-and-drop (persisté dans `localStorage`).
+- Étape A: Coller l’URL → bouton « Charger » (ex. `.../reports/XXXX?fight=117&type=healing&source=2127`).
+- Étape B: L’app affiche les joueurs du fight seulement (5 par ligne).
+- Étape C: Cliquer un joueur (healer) pour le sélectionner; la heatmap se met à jour.
+- Étape D: Optionnel — si l’URL contient `source=ID`, ce joueur est pré‑sélectionné automatiquement.
 
-Mode unique: API v1 (sans OAuth). Définissez `WCL_V1_API_KEY` et l’app utilisera l’API REST v1 (fights, events/casts) sans écran de connexion.
+## Drag-and-drop (optionnel)
+Le drag-and-drop des cartes est optionnel. Pour éviter les erreurs de CDN, il est désactivé par défaut.
+
+Deux options:
+- Utiliser un CDN fiable et ajouter SortableJS dans `app/templates/base.html`.
+- Ou bien déposer `sortable.min.js` dans `app/static/vendor/` et inclure le script local.
+
+Si SortableJS est présent, l’ordre est persisté côté navigateur via `localStorage`.
 
 ## Qualité & scripts
 
@@ -55,12 +61,9 @@ uv run pytest -q
 ```
 
 ## Limitations connues
-- L’API WCL peut évoluer. Les noms de champs GraphQL sont basés sur la doc actuelle; ajustez si l’introspection renvoie des variantes.
-- Pas de base de données; l’ordre est stocké côté navigateur.
-- En mode v1, les données disponibles et les champs peuvent différer légèrement; l’app fait l’agrégation côté serveur.
-
-### Notes
-- L’API v1 est suffisante pour les endpoints utilisés (fights, events/casts). Si vous migrez vers v2 plus tard, il faudra réintroduire OAuth.
+- L’API v1 peut paginer les événements; le client gère `nextPageTimestamp` jusqu’à épuisement.
+- Pas de base de données; l’ordre des cartes (si DnD actif) est stocké côté navigateur.
+- Les payloads v1 varient selon les logs; le mapping est tolérant (participants détectés via `friendlyPlayers` ou `actor.fights`).
 
 ## License
 MIT

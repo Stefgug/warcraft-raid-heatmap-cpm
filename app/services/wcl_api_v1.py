@@ -42,9 +42,12 @@ class WCLV1Client:
         fights = data.get("fights", [])
         fight_raw = None
         for f in fights:
-            if int(f.get("id")) == int(fight_id):
-                fight_raw = f
-                break
+            try:
+                if int(f.get("id")) == int(fight_id):
+                    fight_raw = f
+                    break
+            except Exception:
+                continue
         if not fight_raw:
             raise WCLV1APIError("Fight introuvable pour ce report (v1)")
 
@@ -52,27 +55,112 @@ class WCLV1Client:
         et = fight_raw.get("end_time") or fight_raw.get("endTime")
         if st is None or et is None:
             raise WCLV1APIError("Champs start_time/end_time absents dans la réponse v1")
-        fight = Fight(id=int(fight_raw["id"]), startTime=int(st), endTime=int(et))
+        fight = Fight(id=int(fight_raw.get("id")), startTime=int(st), endTime=int(et))
 
-        # Players: v1 includes a 'friendlies' list; filter to type == 'Player' if present.
+        # Derive the set of players that actually participated in this fight.
+        # Heuristics (robust to variations in v1 payloads):
+        #  1) Prefer fight-local list of friendly players if present.
+        #  2) Else use each actor's `fights` membership to see if they were in this fight.
+        #  3) Fallback to all friendlies of type Player.
         actors_raw = data.get("friendlies", [])
+
+        # 1) Look for fight-local participants (ids)
+        participants: set[int] = set()
+        fp = fight_raw.get("friendlyPlayers") or fight_raw.get("friendlyPlayerIds") or fight_raw.get("friendlies")
+        if isinstance(fp, list):
+            for item in fp:
+                if isinstance(item, int):
+                    participants.add(int(item))
+                elif isinstance(item, dict):
+                    # sometimes entries can be objects with an id field
+                    try:
+                        if "id" in item:
+                            participants.add(int(item["id"]))
+                        elif "playerid" in item:
+                            participants.add(int(item["playerid"]))
+                    except Exception:
+                        pass
+
+        # 2) If still empty, inspect actors' fights membership
+        if not participants:
+            for a in actors_raw:
+                fs = a.get("fights")
+                if not isinstance(fs, list):
+                    continue
+                found = False
+                for ent in fs:
+                    try:
+                        if isinstance(ent, int):
+                            if int(ent) == int(fight_id):
+                                found = True
+                                break
+                        elif isinstance(ent, dict):
+                            # common shapes: {"id": 17, ...} or {"fightID": 17, ...}
+                            fid = ent.get("id") if ent is not None else None
+                            if fid is None:
+                                fid = ent.get("fightID") or ent.get("fightId")
+                            if fid is not None and int(fid) == int(fight_id):
+                                found = True
+                                break
+                    except Exception:
+                        continue
+                if found:
+                    try:
+                        participants.add(int(a.get("id")))
+                    except Exception:
+                        pass
+
+        # Build final players list. Prefer participants set if available; strictly require type=="Player" when present.
         players: List[Actor] = []
-        for a in actors_raw:
-            t = a.get("type")
-            if t is None or str(t) == "Player":
-                # v1 may not include 'type' on friendlies; assume Player when missing
+        if participants:
+            for a in actors_raw:
+                try:
+                    aid = int(a.get("id"))
+                except Exception:
+                    continue
+                if aid not in participants:
+                    continue
+                t = a.get("type")
+                if t is not None and str(t) != "Player":
+                    # if type is known and not a Player, skip
+                    continue
                 players.append(
                     Actor(
-                        id=int(a.get("id")),
+                        id=aid,
                         name=str(a.get("name")),
-                        type=str(t) if t is not None else "Player",
+                        type=str(t) if t is not None else None,
                         subType=a.get("spec") or a.get("class"),
                     )
                 )
-        if not players:
-            # fall back to 'friendlies' as players if no explicit Player type
+        else:
+            # No participants info; fallback to explicit Player types only.
             for a in actors_raw:
-                players.append(Actor(id=int(a.get("id")), name=str(a.get("name"))))
+                t = a.get("type")
+                if str(t) != "Player":
+                    continue
+                try:
+                    aid = int(a.get("id"))
+                except Exception:
+                    continue
+                players.append(
+                    Actor(
+                        id=aid,
+                        name=str(a.get("name")),
+                        type="Player",
+                        subType=a.get("spec") or a.get("class"),
+                    )
+                )
+
+        # Final fallback: if still empty, include friendlies whose 'type' is missing but are referenced by friendlyPlayers
+        if not players and participants:
+            for a in actors_raw:
+                try:
+                    aid = int(a.get("id"))
+                except Exception:
+                    continue
+                if aid not in participants:
+                    continue
+                players.append(Actor(id=aid, name=str(a.get("name"))))
 
         return PlayersAndFight(players=players, fight=fight)
 
@@ -104,4 +192,3 @@ class WCLV1Client:
             if not next_page:
                 break
         return counts
-

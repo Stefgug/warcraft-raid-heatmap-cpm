@@ -6,13 +6,12 @@ from pathlib import Path
 from typing import Dict, List
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request
+from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
-from urllib.parse import urlencode
 
-from app.schemas import CPMItem, CPMResponse, PlayersAndFight
+from app.schemas import CPMItem, CPMResponse
 from app.services.compute import compute_cpm, fight_minutes, min_max_positive
 from app.services.parsing import ParseError, parse_report_url
 from app.services.wcl_api_v1 import WCLV1Client, WCLV1APIError
@@ -23,24 +22,23 @@ ENV_PATH = BASE_DIR / ".env"
 load_dotenv(ENV_PATH)
 
 
-def require_v1_key() -> tuple[str, str]:
-    base = os.getenv("WCL_BASE", "https://www.warcraftlogs.com")
-    v1_key = os.getenv("WCL_V1_API_KEY", "")
-    if not v1_key:
-        raise RuntimeError("WCL_V1_API_KEY manquant dans .env")
-    return base, v1_key
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    base, v1_key = require_v1_key()
+    """Create a single v1 client using the API key from .env.
+
+    This app intentionally avoids OAuth and v2; if the key is missing,
+    we fail early with a clear error.
+    """
+    base = os.getenv("WCL_BASE", "https://www.warcraftlogs.com")
+    v1_key = os.getenv("WCL_V1_API_KEY")
+    if not v1_key:
+        raise RuntimeError("WCL_V1_API_KEY manquant dans .env — l'API v1 est requise.")
     v1 = WCLV1Client(base, v1_key)
     app.state.wcl_v1 = v1
     try:
         yield
     finally:
-        if app.state.wcl_v1 is not None:
-            await app.state.wcl_v1.aclose()
+        await app.state.wcl_v1.aclose()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -52,7 +50,7 @@ app.mount(
     name="static",
 )
 
-def _client_v1(request: Request) -> WCLV1Client:
+def _client_v1(request: Request) -> WCLV1Client | None:
     return request.app.state.wcl_v1
 
 
@@ -66,9 +64,21 @@ async def index(request: Request):
             "report_code": None,
             "fight_id": None,
             "error": None,
-            "uses_v1": True,
         },
     )
+
+
+def _extract_source_id(url: str) -> int | None:
+    try:
+        from urllib.parse import urlparse, parse_qs
+
+        qs = parse_qs(urlparse(url).query)
+        vals = qs.get("source") or qs.get("sourceid")
+        if not vals:
+            return None
+        return int(vals[0])
+    except Exception:
+        return None
 
 
 @app.post("/load", response_class=HTMLResponse)
@@ -99,10 +109,16 @@ async def load_report(request: Request, report_url: str = Form(...)):
                 "report_code": None,
                 "fight_id": None,
                 "error": str(e),
-                "uses_v1": True,
             },
             status_code=502,
         )
+
+    # Optional preselection from URL (?source=...)
+    preselect_source: int | None = _extract_source_id(report_url)
+    if preselect_source is not None:
+        # ensure the id is part of the current fight
+        if all(p.id != preselect_source for p in paf.players):
+            preselect_source = None
 
     return templates.TemplateResponse(
         "index.html",
@@ -113,7 +129,7 @@ async def load_report(request: Request, report_url: str = Form(...)):
             "fight_id": fight_id,
             "fight_minutes": fight_minutes(paf.fight.startTime, paf.fight.endTime),
             "error": None,
-            "uses_v1": True,
+            "preselect_source": preselect_source,
         },
     )
 
@@ -149,6 +165,3 @@ async def api_cpm(
             cpm_by_target=items,
         ).model_dump()
     )
-
-
-# No OAuth routes in v1-only mode
