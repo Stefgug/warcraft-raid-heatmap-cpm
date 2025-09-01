@@ -29,15 +29,12 @@
     });
   }
 
-  // Simple local drag-and-drop using a small handle inside each card
+  // Improved grid-friendly drag-and-drop using nearest-card placement
   function setupDnD(grid, reportCode, fightId) {
     let draggingCard = null;
 
-    // Suppress click selection when starting a drag on the handle
     grid.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('.drag-handle')) {
-        e.stopPropagation();
-      }
+      if (e.target.closest('.drag-handle')) e.stopPropagation();
     }, { capture: true });
 
     grid.addEventListener('dragstart', (e) => {
@@ -54,15 +51,21 @@
     grid.addEventListener('dragover', (e) => {
       if (!draggingCard) return;
       e.preventDefault();
-      const after = getDragAfterElement(grid, e.clientY);
-      if (after == null) grid.appendChild(draggingCard);
-      else grid.insertBefore(draggingCard, after);
+      const target = cardFromPoint(e.clientX, e.clientY, draggingCard);
+      if (!target) {
+        grid.appendChild(draggingCard);
+        return;
+      }
+      if (target === draggingCard) return;
+      const rect = target.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const before = (e.clientY < cy) || (Math.abs(e.clientY - cy) < rect.height * 0.4 && e.clientX < cx);
+      if (before) grid.insertBefore(draggingCard, target);
+      else grid.insertBefore(draggingCard, target.nextSibling);
     });
 
-    grid.addEventListener('drop', (e) => {
-      if (!draggingCard) return;
-      e.preventDefault();
-    });
+    grid.addEventListener('drop', (e) => { if (draggingCard) e.preventDefault(); });
 
     grid.addEventListener('dragend', () => {
       if (!draggingCard) return;
@@ -73,17 +76,13 @@
     });
   }
 
-  function getDragAfterElement(container, y) {
-    const els = [...container.querySelectorAll('.raid-card:not(.dragging)')];
-    let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+  function cardFromPoint(x, y, dragging) {
+    const els = document.elementsFromPoint(x, y);
     for (const el of els) {
-      const box = el.getBoundingClientRect();
-      const offset = y - box.top - box.height / 2;
-      if (offset < 0 && offset > closest.offset) {
-        closest = { offset, element: el };
-      }
+      const card = el.closest && el.closest('.raid-card');
+      if (card && card !== dragging) return card;
     }
-    return closest.element;
+    return null;
   }
 
   function cpmToColor(value, min, max) {
