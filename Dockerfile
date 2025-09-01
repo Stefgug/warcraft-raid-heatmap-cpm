@@ -11,7 +11,9 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY app /app/app
 
-# Use PORT provided by platform; default to 8000 locally
-ENV PORT=8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "${PORT}"]
+# Default PORT for Hugging Face Spaces is 7860; allow override
+ENV PORT=7860
+EXPOSE 7860
 
+# Use shell form so ${PORT} expands; fallback to 7860
+CMD sh -c 'uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-7860}"'
