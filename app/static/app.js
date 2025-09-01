@@ -33,14 +33,26 @@
   function setupDnD(grid, reportCode, fightId) {
     let draggingCard = null;
 
-    grid.addEventListener('dragstart', (e) => {
-      const card = e.target.closest('.raid-card');
-      if (!card) return;
-      draggingCard = card;
-      card.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', card.dataset.id || '');
-    });
+    // Attach dragstart/end to each card (some browsers don't bubble dragstart reliably)
+    const attachCardDnD = (card) => {
+      card.addEventListener('dragstart', (e) => {
+        draggingCard = card;
+        card.classList.add('dragging');
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          // Some browsers require non-empty data to initiate DnD
+          try { e.dataTransfer.setData('text/plain', card.dataset.id || 'card'); } catch (_) {}
+        }
+      });
+      card.addEventListener('dragend', () => {
+        if (!draggingCard) return;
+        draggingCard.classList.remove('dragging');
+        draggingCard = null;
+        const order = Array.from(grid.children).map((el) => parseInt(el.dataset.id, 10));
+        saveOrder(reportCode, fightId, order);
+      });
+    };
+    grid.querySelectorAll('.raid-card').forEach(attachCardDnD);
 
     grid.addEventListener('dragover', (e) => {
       if (!draggingCard) return;
@@ -64,14 +76,6 @@
     });
 
     grid.addEventListener('drop', (e) => { if (draggingCard) e.preventDefault(); });
-
-    grid.addEventListener('dragend', () => {
-      if (!draggingCard) return;
-      draggingCard.classList.remove('dragging');
-      draggingCard = null;
-      const order = Array.from(grid.children).map((el) => parseInt(el.dataset.id, 10));
-      saveOrder(reportCode, fightId, order);
-    });
   }
 
   function nearestCard(container, x, y, dragging) {

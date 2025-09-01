@@ -232,12 +232,21 @@ class WCLV1Client:
         Uses /v1/report/tables/healing to find sources with healing output and
         filters by known healer specs. Falls back to class+healing threshold.
         """
-        params: Dict[str, Any] = {"start": fight.startTime, "end": fight.endTime}
+        params: Dict[str, Any] = {
+            "start": fight.startTime,
+            "end": fight.endTime,
+            "by": "source",
+            "hostility": 0,
+            "translate": "true",
+        }
         data = await self._get(f"/v1/report/tables/healing/{code}", params)
         entries = data.get("entries", [])
         ids: List[int] = []
         for e in entries:
-            if e.get("type") != "Player":
+            t = str(e.get("type") or "")
+            # Tables often set type to class name (e.g., "Priest"). Accept both styles.
+            if t and t.lower() not in {"player", "priest", "druid", "paladin", "shaman", "monk", "evoker"}:
+                # Skip obvious NPCs
                 continue
             try:
                 pid = int(e.get("id"))
