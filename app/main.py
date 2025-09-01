@@ -120,6 +120,14 @@ async def load_report(request: Request, report_url: str = Form(...)):
         if all(p.id != preselect_source for p in paf.players):
             preselect_source = None
 
+    # Compute healer candidates for dropdown
+    healer_ids: list[int] = []
+    try:
+        healer_ids = await _client_v1(request).get_healer_ids(code, paf.fight)
+    except WCLV1APIError:
+        healer_ids = []
+    healers = [p for p in paf.players if p.id in set(healer_ids)]
+
     return templates.TemplateResponse(
         "index.html",
         {
@@ -130,6 +138,7 @@ async def load_report(request: Request, report_url: str = Form(...)):
             "fight_minutes": fight_minutes(paf.fight.startTime, paf.fight.endTime),
             "error": None,
             "preselect_source": preselect_source,
+            "healers": healers,
         },
     )
 

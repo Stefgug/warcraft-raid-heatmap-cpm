@@ -192,3 +192,64 @@ class WCLV1Client:
             if not next_page:
                 break
         return counts
+
+    # --- Healers detection for a given fight ---
+    HEALER_SPECS = {
+        # Priest
+        "Holy", "Discipline",
+        # Druid
+        "Restoration",
+        # Paladin
+        # Holy already covered
+        # Shaman
+        # Restoration already covered
+        # Monk
+        "Mistweaver",
+        # Evoker
+        "Preservation",
+    }
+
+    def _looks_like_healer(self, entry: Dict[str, Any]) -> bool:
+        spec = entry.get("spec") or entry.get("specs")
+        if isinstance(spec, str):
+            if any(k.lower() in spec.lower() for k in self.HEALER_SPECS):
+                return True
+        elif isinstance(spec, list):
+            for s in spec:
+                name = s.get("spec") if isinstance(s, dict) else str(s)
+                if name and any(k.lower() in str(name).lower() for k in self.HEALER_SPECS):
+                    return True
+        # Fallback: healer-ish classes with significant healing done
+        cls = (entry.get("class") or "").lower()
+        healer_classes = {"priest", "druid", "paladin", "shaman", "monk", "evoker"}
+        if cls in healer_classes and float(entry.get("total", 0)) > 50000:
+            return True
+        return False
+
+    async def get_healer_ids(self, code: str, fight: Fight) -> List[int]:
+        """Return player IDs that acted as healers during the fight timeframe.
+
+        Uses /v1/report/tables/healing to find sources with healing output and
+        filters by known healer specs. Falls back to class+healing threshold.
+        """
+        params: Dict[str, Any] = {"start": fight.startTime, "end": fight.endTime}
+        data = await self._get(f"/v1/report/tables/healing/{code}", params)
+        entries = data.get("entries", [])
+        ids: List[int] = []
+        for e in entries:
+            if e.get("type") != "Player":
+                continue
+            try:
+                pid = int(e.get("id"))
+            except Exception:
+                continue
+            if self._looks_like_healer(e):
+                ids.append(pid)
+        # Deduplicate preserving order
+        seen = set()
+        res: List[int] = []
+        for pid in ids:
+            if pid not in seen:
+                seen.add(pid)
+                res.append(pid)
+        return res

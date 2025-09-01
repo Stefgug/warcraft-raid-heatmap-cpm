@@ -33,14 +33,8 @@
   function setupDnD(grid, reportCode, fightId) {
     let draggingCard = null;
 
-    grid.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('.drag-handle')) e.stopPropagation();
-    }, { capture: true });
-
     grid.addEventListener('dragstart', (e) => {
-      const handle = e.target.closest('.drag-handle');
-      if (!handle) return;
-      const card = handle.closest('.raid-card');
+      const card = e.target.closest('.raid-card');
       if (!card) return;
       draggingCard = card;
       card.classList.add('dragging');
@@ -146,52 +140,50 @@
     const reportCode = grid.dataset.reportCode;
     const fightId = parseInt(grid.dataset.fightId, 10);
     const preselect = grid.dataset.preselectSource ? parseInt(grid.dataset.preselectSource, 10) : null;
+    const healerSelect = document.getElementById('healer-select');
 
     // Restore order
     applyOrder(grid, loadOrder(reportCode, fightId));
 
-    // Local DnD with handle
+    // Local DnD on whole cards
     setupDnD(grid, reportCode, fightId);
 
-    // Click to select healer (ignore handle)
-    grid.addEventListener('click', async (e) => {
-      if (e.target.closest('.drag-handle')) return;
-      const card = e.target.closest('.raid-card');
-      if (!card) return;
-      selectCard(card);
-      const sourceId = parseInt(card.dataset.id, 10);
-      const status = document.getElementById('status');
-      try {
-        status.textContent = 'Calcul CPM en cours…';
-        const data = await fetchCPM(reportCode, fightId, sourceId);
-        updateHeatmap(data);
-        status.textContent = 'CPM mis à jour.';
-      } catch (err) {
-        console.error(err);
-        status.textContent = 'Erreur: ' + (err.message || String(err));
-      }
-    });
-
-    // If a preselected source id exists, auto-select and fetch
-    if (preselect) {
-      const card = grid.querySelector(`.raid-card[data-id="${preselect}"]`);
-      if (card) {
-        // Simulate a click flow
-        selectCard(card);
+    // Dropdown change to select healer
+    if (healerSelect) {
+      const runFor = async (sourceId) => {
         const status = document.getElementById('status');
-        (async () => {
-          try {
-            status.textContent = 'Calcul CPM en cours…';
-            const data = await fetchCPM(reportCode, fightId, preselect);
-            updateHeatmap(data);
-            status.textContent = 'CPM mis à jour.';
-          } catch (err) {
-            console.error(err);
-            status.textContent = 'Erreur: ' + (err.message || String(err));
-          }
-        })();
+        try {
+          status.textContent = 'Calcul CPM en cours…';
+          const data = await fetchCPM(reportCode, fightId, sourceId);
+          updateHeatmap(data);
+          status.textContent = 'CPM mis à jour.';
+          const sel = document.getElementById('selected-healer');
+          const opt = healerSelect.options[healerSelect.selectedIndex];
+          if (sel && opt) sel.textContent = `Healer sélectionné: ${opt.textContent}`;
+        } catch (err) {
+          console.error(err);
+          status.textContent = 'Erreur: ' + (err.message || String(err));
+        }
+      };
+
+      healerSelect.addEventListener('change', (e) => {
+        const id = parseInt(healerSelect.value, 10);
+        if (isFinite(id)) runFor(id);
+      });
+
+      // Preselect based on URL ?source= or default first healer
+      let selected = null;
+      if (preselect && [...healerSelect.options].some(o => parseInt(o.value, 10) === preselect)) {
+        healerSelect.value = String(preselect);
+        selected = preselect;
+      } else if (healerSelect.options.length > 0) {
+        healerSelect.selectedIndex = 0;
+        selected = parseInt(healerSelect.value, 10);
       }
+      if (selected) runFor(selected);
     }
+
+    // No auto-click; dropdown handles preselection
   }
 
   document.addEventListener('DOMContentLoaded', init);
