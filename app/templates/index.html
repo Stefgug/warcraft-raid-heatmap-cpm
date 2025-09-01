@@ -26,11 +26,9 @@
     <div id="raid-grid" class="raid-grid" data-report-key="{{ report_code }}::{{ fight_id }}" data-report-code="{{ report_code }}" data-fight-id="{{ fight_id }}" {% if preselect_source %}data-preselect-source="{{ preselect_source }}"{% endif %}>
       {% for p in players %}
       <div class="raid-card" data-id="{{ p.id }}" data-name="{{ p.name }}">
-        <div class="drag-handle" draggable="true" title="Glisser pour réordonner" aria-label="Glisser pour réordonner">≡</div>
-        <div class="row">
-          <div class="name" title="{{ p.name }}">{{ p.name }}</div>
-          <div class="value"><span class="cpm-value" data-id="{{ p.id }}">0.000</span></div>
-        </div>
+        <button class="drag-handle" draggable="true" title="Glisser pour réordonner" aria-label="Glisser pour réordonner" type="button">⤧</button>
+        <div class="value"><span class="cpm-value" data-id="{{ p.id }}">0.000</span></div>
+        <div class="name" title="{{ p.name }}">{{ p.name }}</div>
       </div>
       {% endfor %}
     </div>
