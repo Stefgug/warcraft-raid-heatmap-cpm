@@ -374,9 +374,9 @@
   function selectCard(card) {
     document.querySelectorAll('.raid-card.selected').forEach((el) => el.classList.remove('selected'));
     card.classList.add('selected');
-    const name = card.dataset.name || 'inconnu';
+    const name = card.dataset.name || 'unknown';
     const sel = document.getElementById('selected-healer');
-    if (sel) sel.textContent = `Healer sélectionné: ${name}`;
+    if (sel) sel.textContent = `Selected player: ${name}`;
   }
 
   async function fetchCPM(reportCode, fightId, sourceId) {
@@ -456,13 +456,13 @@
       const runFor = async (sourceId) => {
         const status = document.getElementById('status');
         try {
-          status.textContent = 'Calcul CPM en cours…';
+          status.textContent = 'Calculating CPM…';
           const data = await fetchCPM(reportCode, fightId, sourceId);
           updateHeatmap(data);
-          status.textContent = 'CPM mis à jour.';
+          status.textContent = '';
           const sel = document.getElementById('selected-healer');
           const opt = healerSelect.options[healerSelect.selectedIndex];
-          if (sel && opt) sel.textContent = `Healer sélectionné: ${opt.textContent}`;
+          if (sel && opt) sel.textContent = `Selected player: ${opt.textContent}`;
         } catch (err) {
           console.error(err);
           status.textContent = 'Erreur: ' + (err.message || String(err));
@@ -632,7 +632,7 @@
     if (typeof Tesseract === 'undefined') throw new Error('Tesseract.js non chargé');
     const dictKey = (roster || []).map(p => (p.name || '').trim()).sort().join('\n');
     if (__ocrWorker && __ocrDictKey === dictKey) return __ocrWorker;
-    statusEl && (statusEl.textContent = 'Chargement OCR…');
+    statusEl && (statusEl.textContent = 'Loading recognizer…');
 
     // Create or reuse worker
     if (!__ocrWorker) {
@@ -696,9 +696,9 @@
 
   async function runTesseractOnCanvas(canvas, statusEl, roster, useUserWords) {
     const worker = await ensureWorker(roster, statusEl, useUserWords);
-    statusEl && (statusEl.textContent = 'OCR…');
+    statusEl && (statusEl.textContent = 'Scanning…');
     const r = await worker.recognize(canvas);
-    statusEl && (statusEl.textContent = 'OCR terminé.');
+    statusEl && (statusEl.textContent = '');
     return r;
   }
 
@@ -1037,17 +1037,17 @@
       items = pickLines(result);
       // Auto fallback to per-cell if too few tokens recognized
       if (!items || items.length < Math.max(6, Math.ceil(roster.length * 0.35))) {
-        statusEl.textContent = 'Peu de noms détectés, tentative par case…';
+        statusEl.textContent = 'Few names detected — trying per‑cell…';
         items = await perCellRecognize(canvas, grid, roster, statusEl, !!opts.lexicon);
       }
     }
     // Drop tokens that do not resemble any roster name.
     items = filterByRoster(items, roster, 0.60);
     if (!items.length) {
-      statusEl.textContent = 'OCR: aucun nom détecté.';
+      statusEl.textContent = 'No names detected.';
       return;
     }
-    statusEl.textContent = `OCR: ${items.length} noms candidats détectés.`;
+    statusEl.textContent = `${items.length} name candidates detected.`;
 
     // Hungarian-based matching preview labels
     const rows = clusterRows(items);
@@ -1079,7 +1079,7 @@
     }
     // Hint in status: how many unique matches we used
     const uniqCount = new Set(items.map(i => i.text)).size;
-    statusEl.textContent = `${statusEl.textContent} (${uniqCount} libellés, ${roster.length} attendus)`;
+    statusEl.textContent = `${statusEl.textContent} (${uniqCount} unique labels, ${roster.length} expected)`;
 
     // Map to roster and reorder grid
     const used = new Set();
@@ -1154,7 +1154,7 @@
         section.classList.toggle('hidden', !show);
       }
     } catch (_) {}
-    statusEl.textContent = `Disposition mise à jour. ${used.size}/${expected} détectés; ${rest.length} en attente.`;
+    statusEl.textContent = `Layout updated. ${used.size}/${expected} matched; ${rest.length} in pool.`;
   }
 
   function setupOCR(grid, reportCode, fightId, pool) {
@@ -1172,18 +1172,13 @@
     fileInput.addEventListener('change', async () => {
       const f = fileInput.files && fileInput.files[0];
       if (!f) return;
-      statusEl.textContent = 'Lecture image…';
-      const opts = {
-        upscale: document.getElementById('ocr-upscale')?.checked ?? true,
-        threshold: document.getElementById('ocr-threshold')?.checked ?? false,
-        lexicon: document.getElementById('ocr-lexicon')?.checked ?? true,
-        percell: document.getElementById('ocr-percell')?.checked ?? false,
-      };
+      statusEl.textContent = 'Loading image…';
+      const opts = { upscale: true, threshold: false, lexicon: true, percell: false };
       try {
         await performOcrAndReorder(f, opts, grid, reportCode, fightId, statusEl, previewCanvas, pool);
       } catch (err) {
         console.error(err);
-        statusEl.textContent = 'OCR en échec: ' + (err.message || String(err));
+        statusEl.textContent = 'Recognition failed: ' + (err.message || String(err));
       }
     });
   }

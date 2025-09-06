@@ -2,11 +2,11 @@
 {% block content %}
   <section class="panel">
     <form method="post" action="/load" class="url-form">
-      <label for="report_url">URL du report Warcraft Logs</label>
+      <label for="report_url">Warcraft Logs report URL</label>
       <input type="url" id="report_url" name="report_url" placeholder="https://www.warcraftlogs.com/reports/..." required>
-      <button type="submit">Charger</button>
+      <button type="submit">Load</button>
     </form>
-    <div class="note">Mode API v1 (clé). Aucune connexion requise.</div>
+    
     {% if error %}
       <div class="error">{{ error }}</div>
     {% endif %}
@@ -18,34 +18,28 @@
       <div><strong>Report:</strong> <code>{{ report_code }}</code></div>
       <div><strong>Fight:</strong> <code>{{ fight_id }}</code></div>
       {% if fight_minutes is not none %}
-      <div><strong>Durée:</strong> {{ '%.2f'|format(fight_minutes) }} min</div>
+      <div><strong>Duration:</strong> {{ '%.2f'|format(fight_minutes) }} min</div>
       {% endif %}
       <div class="healer-picker">
-        <label for="healer-select"><strong>Joueur:</strong></label>
+        <label for="healer-select"><strong>Player:</strong></label>
         <select id="healer-select">
           {% if healers and healers|length > 0 %}
             {% for h in healers %}
               <option value="{{ h.id }}">{{ h.name }}</option>
             {% endfor %}
           {% else %}
-            <option value="" disabled selected>Aucun joueur détecté</option>
+            <option value="" disabled selected>No players found</option>
           {% endif %}
         </select>
       </div>
-    <div id="selected-healer" class="note">Utilisez la liste ci‑dessus pour choisir le joueur à analyser.</div>
+    <div id="selected-healer" class="note">Pick a player to compute CPM heatmap.</div>
     </div>
 
     <div class="ocr-tools">
       <div class="ocr-col">
-        <label for="ocr-upload" class="ocr-label"><strong>Disposition auto (OCR):</strong></label>
+        <label for="ocr-upload" class="ocr-label"><strong>Auto arrange from screenshot:</strong></label>
         <input id="ocr-upload" type="file" accept="image/*" />
-        <div class="note">Chargez une capture des raid frames (noms lisibles). Traitement local via Tesseract.js (aucun upload serveur).</div>
-        <div class="ocr-actions">
-          <label class="ocr-opt"><input id="ocr-upscale" type="checkbox" checked> Upscale x2 pour lisibilité</label>
-          <label class="ocr-opt"><input id="ocr-threshold" type="checkbox"> Noir et blanc fort</label>
-          <label class="ocr-opt"><input id="ocr-lexicon" type="checkbox" checked> Lexique des joueurs</label>
-          <label class="ocr-opt"><input id="ocr-percell" type="checkbox"> OCR par case</label>
-        </div>
+        
         <div id="ocr-status" class="status"></div>
       </div>
       <div class="ocr-col">
@@ -62,8 +56,8 @@
       {% endfor %}
     </div>
     <div id="pool-section" class="pool-section hidden">
-      <div class="pool-title"><strong>Joueurs non détectés</strong> — faites glisser pour remplir les cases vides</div>
-      <div id="undetected-pool" class="pool-grid" aria-label="Joueurs non détectés"></div>
+      <div class="pool-title"><strong>Undetected players</strong> — drag into the blanks above</div>
+      <div id="undetected-pool" class="pool-grid" aria-label="Undetected players"></div>
     </div>
     <div id="status" class="status"></div>
   </section>
