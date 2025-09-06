@@ -32,7 +32,25 @@
           {% endif %}
         </select>
       </div>
-      <div id="selected-healer" class="note">Utilisez la liste ci‑dessus pour choisir le joueur à analyser.</div>
+    <div id="selected-healer" class="note">Utilisez la liste ci‑dessus pour choisir le joueur à analyser.</div>
+    </div>
+
+    <div class="ocr-tools">
+      <div class="ocr-col">
+        <label for="ocr-upload" class="ocr-label"><strong>Disposition auto (OCR):</strong></label>
+        <input id="ocr-upload" type="file" accept="image/*" />
+        <div class="note">Chargez une capture des raid frames (noms lisibles). Traitement local via Tesseract.js (aucun upload serveur).</div>
+        <div class="ocr-actions">
+          <label class="ocr-opt"><input id="ocr-upscale" type="checkbox" checked> Upscale x2 pour lisibilité</label>
+          <label class="ocr-opt"><input id="ocr-threshold" type="checkbox"> Noir et blanc fort</label>
+          <label class="ocr-opt"><input id="ocr-lexicon" type="checkbox" checked> Lexique des joueurs</label>
+          <label class="ocr-opt"><input id="ocr-percell" type="checkbox"> OCR par case</label>
+        </div>
+        <div id="ocr-status" class="status"></div>
+      </div>
+      <div class="ocr-col">
+        <canvas id="ocr-preview" width="0" height="0" style="max-width: 480px; width: 100%; height: auto; display: none; border: 1px solid #2a3242; border-radius: 6px;"></canvas>
+      </div>
     </div>
 
     <div id="raid-grid" class="raid-grid" data-report-key="{{ report_code }}::{{ fight_id }}" data-report-code="{{ report_code }}" data-fight-id="{{ fight_id }}" {% if preselect_source %}data-preselect-source="{{ preselect_source }}"{% endif %}>
@@ -42,6 +60,10 @@
         <div class="name" title="{{ p.name }}">{{ p.name }}</div>
       </div>
       {% endfor %}
+    </div>
+    <div id="pool-section" class="pool-section hidden">
+      <div class="pool-title"><strong>Joueurs non détectés</strong> — faites glisser pour remplir les cases vides</div>
+      <div id="undetected-pool" class="pool-grid" aria-label="Joueurs non détectés"></div>
     </div>
     <div id="status" class="status"></div>
   </section>

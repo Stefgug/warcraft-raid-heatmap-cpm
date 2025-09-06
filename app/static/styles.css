@@ -40,6 +40,49 @@ h1 { margin: 8px 0 4px; font-size: 20px; }
 .raid-card .cpm-value { color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9); }
 .raid-card.dragging { opacity: 0.6; pointer-events: none; transform: scale(0.98); }
 .raid-card.manual-drag { opacity: 0.6; transform: scale(0.98); }
+/* Drop target highlight */
+.raid-card.drop-target {
+  position: relative;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.35) inset, 0 0 10px rgba(245,158,11,0.55);
+}
+.raid-card.drop-target::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 3px solid #f59e0b;
+  border-radius: 12px;
+  pointer-events: none;
+  box-shadow: 0 0 14px rgba(245,158,11,0.55);
+}
+.raid-card.placeholder.drop-target {
+  border-color: #f59e0b;
+}
+.raid-card.placeholder.drop-target::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 3px dashed #f59e0b;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+/* Hide Sortable's temporary ghost when dragging from pool into grid to avoid visual extra slot */
+.raid-grid[data-suppress-ghost="1"] .sortable-ghost,
+.raid-grid[data-suppress-insert="1"] .drag-slot {
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+/* Placeholder slots (blank cells in the grid) */
+.raid-card.placeholder { background: repeating-linear-gradient( 135deg, #141a23, #141a23 10px, #10151d 10px, #10151d 20px ); color: #6b7280; border: 1px dashed #324055; cursor: default; }
+.raid-card.placeholder::after { content: 'Vide'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 700; letter-spacing: 0.2px; }
+.raid-card.placeholder .name, .raid-card.placeholder .value, .raid-card.placeholder .cpm-value { display: none; }
 
 @media (max-width: 900px) {
   .raid-grid { grid-template-columns: repeat(5, 1fr); }
@@ -47,4 +90,28 @@ h1 { margin: 8px 0 4px; font-size: 20px; }
 
 @media (max-width: 600px) {
   .raid-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* OCR tools */
+.ocr-tools { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: start; margin: 8px 0 14px; }
+.ocr-label { display: block; margin-bottom: 6px; }
+.ocr-actions { display: flex; gap: 12px; margin-top: 8px; }
+.ocr-opt { color: var(--muted); font-size: 14px; }
+.ocr-col input[type="file"] { display: block; margin-top: 4px; }
+
+@media (max-width: 920px) {
+  .ocr-tools { grid-template-columns: 1fr; }
+}
+/* Undetected pool styles */
+.pool-section { margin-top: 10px; }
+.pool-section.hidden { display: none !important; }
+.pool-title { color: var(--muted); margin: 6px 0; }
+.pool-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; min-height: 20px; }
+.pool-grid .raid-card { min-height: 104px; }
+.pool-grid .raid-card .name { font-size: 2rem; }
+@media (max-width: 900px) {
+  .pool-grid { grid-template-columns: repeat(5, 1fr); }
+}
+@media (max-width: 600px) {
+  .pool-grid { grid-template-columns: repeat(5, 1fr); }
 }

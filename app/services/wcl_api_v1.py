@@ -6,6 +6,32 @@ import httpx
 
 from app.schemas import Actor, Fight, PlayersAndFight
 
+import unicodedata as _ud
+
+
+def _is_playerish(name: str) -> bool:
+    """Heuristic: WoW names are single-token, 2–16 chars, start with a letter,
+    and then contain letters, marks, numbers, apostrophe or hyphen. Supports
+    Unicode letters (accents, Nordic chars, etc.)."""
+    if not name:
+        return False
+    n = name.strip()
+    if not n or len(n) < 2 or len(n) > 16 or any(ch.isspace() for ch in n):
+        return False
+    # First char must be a letter
+    if _ud.category(n[0])[0] != 'L':
+        return False
+    for ch in n[1:]:
+        if ch in "-'":
+            continue
+        cat = _ud.category(ch)
+        if cat[0] in ('L', 'M'):  # letters and combining marks
+            continue
+        if cat == 'Nd':  # decimal digit
+            continue
+        return False
+    return True
+
 
 class WCLV1APIError(RuntimeError):
     pass
@@ -151,7 +177,8 @@ class WCLV1Client:
                     )
                 )
 
-        # Final fallback: if still empty, include friendlies whose 'type' is missing but are referenced by friendlyPlayers
+        # Final fallback: if still empty, include friendlies whose 'type' is missing but are referenced by friendlyPlayers.
+        # Also guard against NPC/buff names accidentally creeping in (e.g., "Vengeful Oath").
         if not players and participants:
             for a in actors_raw:
                 try:
@@ -160,7 +187,10 @@ class WCLV1Client:
                     continue
                 if aid not in participants:
                     continue
-                players.append(Actor(id=aid, name=str(a.get("name"))))
+                name = str(a.get("name") or "").strip()
+                if not _is_playerish(name):
+                    continue
+                players.append(Actor(id=aid, name=name))
 
         return PlayersAndFight(players=players, fight=fight)
 

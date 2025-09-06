@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="/static/styles.css" />
     <!-- Optional drag-and-drop helper (CDN). No integrity to avoid SRI block. -->
     <script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <!-- Lightweight in-browser OCR (runs on client CPU) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   </head>
   <body>
     <header>
@@ -15,6 +17,6 @@
     <main>
       {% block content %}{% endblock %}
     </main>
-    <script src="/static/app.js?v=20250901b"></script>
+    <script src="/static/app.js?v=20250906b"></script>
   </body>
   </html>
