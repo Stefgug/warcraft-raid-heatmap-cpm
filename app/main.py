@@ -55,6 +55,9 @@ def _client_v1(request: Request) -> WCLV1Client | None:
     return request.app.state.wcl_v1
 
 
+NO_STORE_HEADERS = {"Cache-Control": "no-store, max-age=0"}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse(
@@ -66,6 +69,7 @@ async def index(request: Request):
             "fight_id": None,
             "error": None,
         },
+        headers=NO_STORE_HEADERS,
     )
 
 
@@ -97,6 +101,7 @@ async def load_report(request: Request, report_url: str = Form(...)):
                 "error": str(e),
             },
             status_code=400,
+            headers=NO_STORE_HEADERS,
         )
 
     try:
@@ -112,6 +117,7 @@ async def load_report(request: Request, report_url: str = Form(...)):
                 "error": str(e),
             },
             status_code=502,
+            headers=NO_STORE_HEADERS,
         )
 
     # Build simple fight objects and default selection (filter to boss fights >=30s)
@@ -203,6 +209,7 @@ async def load_report(request: Request, report_url: str = Form(...)):
                 "error": f"Failed to read fights: {e}",
             },
             status_code=502,
+            headers=NO_STORE_HEADERS,
         )
 
     preselect_source: int | None = _extract_source_id(report_url)
@@ -238,6 +245,7 @@ async def load_report(request: Request, report_url: str = Form(...)):
             "fights": fights,
             "selected_ids": set(selected_ids),
         },
+        headers=NO_STORE_HEADERS,
     )
 
 
