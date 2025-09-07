@@ -35,4 +35,3 @@ def min_max_positive(values: Iterable[float]) -> tuple[float, float]:
     if not positives:
         return 0.0, 0.0
     return min(positives), max(positives)
-

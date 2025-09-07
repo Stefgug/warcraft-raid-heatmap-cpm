@@ -19,15 +19,15 @@ def _is_playerish(name: str) -> bool:
     if not n or len(n) < 2 or len(n) > 16 or any(ch.isspace() for ch in n):
         return False
     # First char must be a letter
-    if _ud.category(n[0])[0] != 'L':
+    if _ud.category(n[0])[0] != "L":
         return False
     for ch in n[1:]:
         if ch in "-'":
             continue
         cat = _ud.category(ch)
-        if cat[0] in ('L', 'M'):  # letters and combining marks
+        if cat[0] in ("L", "M"):  # letters and combining marks
             continue
-        if cat == 'Nd':  # decimal digit
+        if cat == "Nd":  # decimal digit
             continue
         return False
     return True
@@ -92,7 +92,11 @@ class WCLV1Client:
 
         # 1) Look for fight-local participants (ids)
         participants: set[int] = set()
-        fp = fight_raw.get("friendlyPlayers") or fight_raw.get("friendlyPlayerIds") or fight_raw.get("friendlies")
+        fp = (
+            fight_raw.get("friendlyPlayers")
+            or fight_raw.get("friendlyPlayerIds")
+            or fight_raw.get("friendlies")
+        )
         if isinstance(fp, list):
             for item in fp:
                 if isinstance(item, int):
@@ -199,7 +203,9 @@ class WCLV1Client:
         data = await self._get(f"/v1/report/fights/{code}", {})
         return data.get("fights", [])
 
-    async def get_cast_counts_by_target(self, code: str, fight: Fight, source_id: int) -> Dict[int, int]:
+    async def get_cast_counts_by_target(
+        self, code: str, fight: Fight, source_id: int
+    ) -> Dict[int, int]:
         counts: Dict[int, int] = {}
         params: Dict[str, Any] = {
             "start": fight.startTime,
@@ -231,7 +237,8 @@ class WCLV1Client:
     # --- Healers detection for a given fight ---
     HEALER_SPECS = {
         # Priest
-        "Holy", "Discipline",
+        "Holy",
+        "Discipline",
         # Druid
         "Restoration",
         # Paladin
@@ -280,7 +287,15 @@ class WCLV1Client:
         for e in entries:
             t = str(e.get("type") or "")
             # Tables often set type to class name (e.g., "Priest"). Accept both styles.
-            if t and t.lower() not in {"player", "priest", "druid", "paladin", "shaman", "monk", "evoker"}:
+            if t and t.lower() not in {
+                "player",
+                "priest",
+                "druid",
+                "paladin",
+                "shaman",
+                "monk",
+                "evoker",
+            }:
                 # Skip obvious NPCs
                 continue
             try:

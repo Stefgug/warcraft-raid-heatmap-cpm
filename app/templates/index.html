@@ -38,13 +38,17 @@
     <div class="ocr-tools">
       <div class="ocr-col fight-picker">
         <label for="fight-select" class="ocr-label"><strong>Fights to analyze:</strong></label>
-        <select id="fight-select" multiple size="6" class="styled-select" style="height:auto">
+        <select id="fight-select" multiple size="10" class="styled-select fight-select">
           {% if fights %}
             {% for f in fights %}
+              {% set minutes = (f.duration_ms // 60000) %}
+              {% set seconds = ((f.duration_ms // 1000) % 60) %}
               <option value="{{ f.id }}" {% if f.id in selected_ids %}selected{% endif %}>
-                {% if f.name %}{{ f.name }}{% else %}Fight {{ f.id }}{% endif %}
-                {% if f.difficulty %}(Diff {{ f.difficulty }}){% endif %}
-                {% if f.kill %}[Kill]{% else %}[Wipe]{% endif %}
+                {{ f.name or ('Boss ' ~ f.boss) }}
+                {% if f.difficulty %} (Diff {{ f.difficulty }}){% endif %}
+                #{{ f.attempt_no }} —
+                {% if f.kill %}Kill{% else %}Wipe{% if f.wipe_pct is not none %} {{ '%.1f'|format(f.wipe_pct) }}%{% endif %}{% endif %}
+                — {{ '%d:%02d'|format(minutes, seconds) }}
               </option>
             {% endfor %}
           {% endif %}

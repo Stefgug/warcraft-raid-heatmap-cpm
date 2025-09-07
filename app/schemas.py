@@ -33,4 +33,3 @@ class CPMResponse(BaseModel):
     min: float
     max: float
     cpm_by_target: list[CPMItem]
-

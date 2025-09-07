@@ -78,6 +78,7 @@ def parse_report_any(url_or_code: str) -> tuple[str, dict]:
         raise ParseError("Missing report code")
 
     sel: dict = {"extra": {}}
+
     def take_int(key: str) -> int | None:
         v = qs.get(key)
         if not v:

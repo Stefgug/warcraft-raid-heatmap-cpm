@@ -50,6 +50,7 @@ app.mount(
     name="static",
 )
 
+
 def _client_v1(request: Request) -> WCLV1Client | None:
     return request.app.state.wcl_v1
 
@@ -88,7 +89,13 @@ async def load_report(request: Request, report_url: str = Form(...)):
     except ParseError as e:
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "players": None, "report_code": None, "fight_id": None, "error": str(e)},
+            {
+                "request": request,
+                "players": None,
+                "report_code": None,
+                "fight_id": None,
+                "error": str(e),
+            },
             status_code=400,
         )
 
@@ -97,25 +104,66 @@ async def load_report(request: Request, report_url: str = Form(...)):
     except WCLV1APIError as e:
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "players": None, "report_code": None, "fight_id": None, "error": str(e)},
+            {
+                "request": request,
+                "players": None,
+                "report_code": None,
+                "fight_id": None,
+                "error": str(e),
+            },
             status_code=502,
         )
 
-    # Build simple fight objects and default selection
+    # Build simple fight objects and default selection (filter to boss fights >=30s)
     fights = []
     for f in fights_raw:
         try:
-            fights.append({
-                "id": int(f.get("id")),
-                "boss": int(f.get("boss")) if f.get("boss") is not None else None,
-                "name": f.get("name") or f.get("encounterName") or "",
-                "difficulty": int(f.get("difficulty")) if f.get("difficulty") is not None else None,
-                "kill": 1 if f.get("kill") else 0,
-                "start": int(f.get("start_time") or f.get("startTime")),
-                "end": int(f.get("end_time") or f.get("endTime")),
-            })
+            fid = int(f.get("id"))
+            boss = f.get("boss")
+            boss_id = int(boss) if boss is not None else None
+            name = f.get("name") or f.get("encounterName") or ""
+            diff = f.get("difficulty")
+            difficulty = int(diff) if diff is not None else None
+            kill = 1 if f.get("kill") else 0
+            st = int(f.get("start_time") or f.get("startTime"))
+            et = int(f.get("end_time") or f.get("endTime"))
+            dur_ms = max(0, et - st)
+            # boss percentage heuristics for wipes
+            pct = None
+            for key in ("bossPercentage", "fightPercentage", "bosspercent", "boss_percent"):
+                val = f.get(key)
+                if val is not None:
+                    try:
+                        pct = float(val)
+                        break
+                    except Exception:
+                        pass
+            # filter: only boss fights and >= 30s
+            if not boss_id or boss_id <= 0 or dur_ms < 30000:
+                continue
+            fights.append(
+                {
+                    "id": fid,
+                    "boss": boss_id,
+                    "name": name,
+                    "difficulty": difficulty,
+                    "kill": kill,
+                    "start": st,
+                    "end": et,
+                    "duration_ms": dur_ms,
+                    "wipe_pct": pct,
+                }
+            )
         except Exception:
             continue
+
+    # Numerotate attempts per (boss,difficulty)
+    fights.sort(key=lambda x: x.get("start", 0))
+    counter: dict[tuple[int, int | None], int] = {}
+    for f in fights:
+        key = (f.get("boss"), f.get("difficulty"))
+        counter[key] = counter.get(key, 0) + 1
+        f["attempt_no"] = counter[key]
 
     # Default selected fight ids
     selected_ids: list[int] = []
@@ -147,7 +195,13 @@ async def load_report(request: Request, report_url: str = Form(...)):
     except Exception as e:
         return templates.TemplateResponse(
             "index.html",
-            {"request": request, "players": None, "report_code": None, "fight_id": None, "error": f"Failed to read fights: {e}"},
+            {
+                "request": request,
+                "players": None,
+                "report_code": None,
+                "fight_id": None,
+                "error": f"Failed to read fights: {e}",
+            },
             status_code=502,
         )
 
@@ -173,7 +227,11 @@ async def load_report(request: Request, report_url: str = Form(...)):
             "report_code": code,
             "fight_id": selected_ids[0] if selected_ids else None,
             "fight_ids": ",".join(str(x) for x in selected_ids),
-            "fight_minutes": total_minutes if total_minutes > 0 else fight_minutes(paf.fight.startTime, paf.fight.endTime),
+            "fight_minutes": (
+                total_minutes
+                if total_minutes > 0
+                else fight_minutes(paf.fight.startTime, paf.fight.endTime)
+            ),
             "error": None,
             "preselect_source": preselect_source,
             "healers": healers,
@@ -218,19 +276,24 @@ async def api_cpm(
             et = int(fraw.get("end_time") or fraw.get("endTime"))
             minutes = fight_minutes(st, et)
             total_minutes += minutes
-            counts = await _client_v1(request).get_cast_counts_by_target(code, Fight(id=fid, startTime=st, endTime=et), source_id)
+            counts = await _client_v1(request).get_cast_counts_by_target(
+                code, Fight(id=fid, startTime=st, endTime=et), source_id
+            )
             for k, v in counts.items():
                 total_counts[k] = total_counts.get(k, 0) + int(v)
     except WCLV1APIError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
 
-    minutes = total_minutes if total_minutes > 0 else fight_minutes(paf.fight.startTime, paf.fight.endTime)
+    minutes = (
+        total_minutes
+        if total_minutes > 0
+        else fight_minutes(paf.fight.startTime, paf.fight.endTime)
+    )
     cpm_map = compute_cpm(total_counts, [p.id for p in paf.players], minutes)
     mm_min, mm_max = min_max_positive(cpm_map.values())
 
     items: List[CPMItem] = [
-        CPMItem(id=p.id, name=p.name, value=round(cpm_map.get(p.id, 0.0), 3))
-        for p in paf.players
+        CPMItem(id=p.id, name=p.name, value=round(cpm_map.get(p.id, 0.0), 3)) for p in paf.players
     ]
 
     return JSONResponse(
