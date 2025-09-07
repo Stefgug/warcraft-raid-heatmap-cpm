@@ -36,6 +36,21 @@
     </div>
 
     <div class="ocr-tools">
+      <div class="ocr-col fight-picker">
+        <label for="fight-select" class="ocr-label"><strong>Fights to analyze:</strong></label>
+        <select id="fight-select" multiple size="6" class="styled-select" style="height:auto">
+          {% if fights %}
+            {% for f in fights %}
+              <option value="{{ f.id }}" {% if f.id in selected_ids %}selected{% endif %}>
+                {% if f.name %}{{ f.name }}{% else %}Fight {{ f.id }}{% endif %}
+                {% if f.difficulty %}(Diff {{ f.difficulty }}){% endif %}
+                {% if f.kill %}[Kill]{% else %}[Wipe]{% endif %}
+              </option>
+            {% endfor %}
+          {% endif %}
+        </select>
+        <button id="fight-apply" type="button" class="btn-primary" style="margin-top:6px">Apply selection</button>
+      </div>
       <div class="ocr-col">
         <label for="ocr-upload" class="ocr-label"><strong>Auto arrange from screenshot:</strong></label>
         <input id="ocr-upload" type="file" accept="image/*" style="display:none" />
@@ -44,7 +59,7 @@
       </div>
     </div>
 
-    <div id="raid-grid" class="raid-grid" data-report-key="{{ report_code }}::{{ fight_id }}" data-report-code="{{ report_code }}" data-fight-id="{{ fight_id }}" {% if preselect_source %}data-preselect-source="{{ preselect_source }}"{% endif %}>
+    <div id="raid-grid" class="raid-grid" data-report-key="{{ report_code }}::{{ fight_id }}" data-report-code="{{ report_code }}" data-fight-id="{{ fight_id }}" {% if fight_ids %}data-fight-ids="{{ fight_ids }}"{% endif %} {% if preselect_source %}data-preselect-source="{{ preselect_source }}"{% endif %}>
       {% for p in players %}
       <div class="raid-card" data-id="{{ p.id }}" data-name="{{ p.name }}">
         <div class="value"><span class="cpm-value" data-id="{{ p.id }}">0.000</span></div>

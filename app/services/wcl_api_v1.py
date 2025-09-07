@@ -194,6 +194,11 @@ class WCLV1Client:
 
         return PlayersAndFight(players=players, fight=fight)
 
+    async def get_report_fights(self, code: str) -> List[Dict[str, Any]]:
+        """Return raw fights list for a report (v1)."""
+        data = await self._get(f"/v1/report/fights/{code}", {})
+        return data.get("fights", [])
+
     async def get_cast_counts_by_target(self, code: str, fight: Fight, source_id: int) -> Dict[int, int]:
         counts: Dict[int, int] = {}
         params: Dict[str, Any] = {

@@ -11,9 +11,9 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
-from app.schemas import CPMItem, CPMResponse
+from app.schemas import CPMItem, CPMResponse, Fight
 from app.services.compute import compute_cpm, fight_minutes, min_max_positive
-from app.services.parsing import ParseError, parse_report_url
+from app.services.parsing import ParseError, parse_report_url, parse_report_any
 from app.services.wcl_api_v1 import WCLV1Client, WCLV1APIError
 
 
@@ -84,44 +84,86 @@ def _extract_source_id(url: str) -> int | None:
 @app.post("/load", response_class=HTMLResponse)
 async def load_report(request: Request, report_url: str = Form(...)):
     try:
-        code, fight_id = parse_report_url(report_url)
+        code, sel = parse_report_any(report_url)
     except ParseError as e:
         return templates.TemplateResponse(
             "index.html",
-            {
-                "request": request,
-                "players": None,
-                "report_code": None,
-                "fight_id": None,
-                "error": str(e),
-            },
+            {"request": request, "players": None, "report_code": None, "fight_id": None, "error": str(e)},
             status_code=400,
         )
 
     try:
-        paf = await _client_v1(request).get_players_and_fight(code, fight_id)
+        fights_raw = await _client_v1(request).get_report_fights(code)
     except WCLV1APIError as e:
         return templates.TemplateResponse(
             "index.html",
-            {
-                "request": request,
-                "players": None,
-                "report_code": None,
-                "fight_id": None,
-                "error": str(e),
-            },
+            {"request": request, "players": None, "report_code": None, "fight_id": None, "error": str(e)},
             status_code=502,
         )
 
-    # Optional preselection from URL (?source=...)
-    preselect_source: int | None = _extract_source_id(report_url)
-    if preselect_source is not None:
-        # ensure the id is part of the current fight
-        if all(p.id != preselect_source for p in paf.players):
-            preselect_source = None
+    # Build simple fight objects and default selection
+    fights = []
+    for f in fights_raw:
+        try:
+            fights.append({
+                "id": int(f.get("id")),
+                "boss": int(f.get("boss")) if f.get("boss") is not None else None,
+                "name": f.get("name") or f.get("encounterName") or "",
+                "difficulty": int(f.get("difficulty")) if f.get("difficulty") is not None else None,
+                "kill": 1 if f.get("kill") else 0,
+                "start": int(f.get("start_time") or f.get("startTime")),
+                "end": int(f.get("end_time") or f.get("endTime")),
+            })
+        except Exception:
+            continue
 
-    # Simplify: allow selecting anyone from the raid for analysis
+    # Default selected fight ids
+    selected_ids: list[int] = []
+    if sel.get("fight"):
+        selected_ids = [int(sel["fight"])]
+    else:
+        boss = sel.get("boss")
+        diff = sel.get("difficulty")
+        wipes = sel.get("wipes")
+        kill = sel.get("kill")
+        for f in fights:
+            if boss and f.get("boss") != boss:
+                continue
+            if diff and f.get("difficulty") != diff:
+                continue
+            if wipes == 1 and f.get("kill") == 1:
+                continue
+            if kill == 1 and f.get("kill") != 1:
+                continue
+            selected_ids.append(f["id"])
+        # If nothing matched, default to all fights
+        if not selected_ids and fights:
+            selected_ids = [f["id"] for f in fights]
+
+    # Fetch players based on the first selected fight to populate roster
+    try:
+        first_id = selected_ids[0]
+        paf = await _client_v1(request).get_players_and_fight(code, first_id)
+    except Exception as e:
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "players": None, "report_code": None, "fight_id": None, "error": f"Failed to read fights: {e}"},
+            status_code=502,
+        )
+
+    preselect_source: int | None = _extract_source_id(report_url)
+    if preselect_source is not None and all(p.id != preselect_source for p in paf.players):
+        preselect_source = None
+
     healers = paf.players
+
+    # minutes across selected fights
+    total_minutes = 0.0
+    fset = {f["id"]: f for f in fights}
+    for fid in selected_ids:
+        fr = fset.get(fid)
+        if fr:
+            total_minutes += fight_minutes(fr["start"], fr["end"])
 
     return templates.TemplateResponse(
         "index.html",
@@ -129,11 +171,14 @@ async def load_report(request: Request, report_url: str = Form(...)):
             "request": request,
             "players": paf.players,
             "report_code": code,
-            "fight_id": fight_id,
-            "fight_minutes": fight_minutes(paf.fight.startTime, paf.fight.endTime),
+            "fight_id": selected_ids[0] if selected_ids else None,
+            "fight_ids": ",".join(str(x) for x in selected_ids),
+            "fight_minutes": total_minutes if total_minutes > 0 else fight_minutes(paf.fight.startTime, paf.fight.endTime),
             "error": None,
             "preselect_source": preselect_source,
             "healers": healers,
+            "fights": fights,
+            "selected_ids": set(selected_ids),
         },
     )
 
@@ -142,17 +187,45 @@ async def load_report(request: Request, report_url: str = Form(...)):
 async def api_cpm(
     request: Request,
     code: str = Query(...),
-    fight_id: int = Query(...),
     source_id: int = Query(...),
+    fight_id: int | None = Query(None),
+    fight_ids: str | None = Query(None),
 ):
     try:
-        paf = await _client_v1(request).get_players_and_fight(code, fight_id)
-        counts = await _client_v1(request).get_cast_counts_by_target(code, paf.fight, source_id)
+        fights_raw = await _client_v1(request).get_report_fights(code)
+        fights_by_id = {int(f.get("id")): f for f in fights_raw if f.get("id") is not None}
+        # Determine selected fights
+        ids: list[int] = []
+        if fight_ids:
+            ids = [int(x) for x in fight_ids.split(",") if x]
+        elif fight_id is not None:
+            ids = [int(fight_id)]
+        if not ids:
+            raise HTTPException(status_code=400, detail="Missing fight selection")
+
+        # Build roster from first fight
+        first_id = ids[0]
+        paf = await _client_v1(request).get_players_and_fight(code, first_id)
+
+        # Aggregate counts across fights
+        total_counts: Dict[int, int] = {}
+        total_minutes = 0.0
+        for fid in ids:
+            fraw = fights_by_id.get(fid)
+            if not fraw:
+                continue
+            st = int(fraw.get("start_time") or fraw.get("startTime"))
+            et = int(fraw.get("end_time") or fraw.get("endTime"))
+            minutes = fight_minutes(st, et)
+            total_minutes += minutes
+            counts = await _client_v1(request).get_cast_counts_by_target(code, Fight(id=fid, startTime=st, endTime=et), source_id)
+            for k, v in counts.items():
+                total_counts[k] = total_counts.get(k, 0) + int(v)
     except WCLV1APIError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
 
-    minutes = fight_minutes(paf.fight.startTime, paf.fight.endTime)
-    cpm_map = compute_cpm(counts, [p.id for p in paf.players], minutes)
+    minutes = total_minutes if total_minutes > 0 else fight_minutes(paf.fight.startTime, paf.fight.endTime)
+    cpm_map = compute_cpm(total_counts, [p.id for p in paf.players], minutes)
     mm_min, mm_max = min_max_positive(cpm_map.values())
 
     items: List[CPMItem] = [

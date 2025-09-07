@@ -381,8 +381,13 @@
     if (sel) sel.textContent = `Selected player: ${name}`;
   }
 
-  async function fetchCPM(reportCode, fightId, sourceId) {
-    const params = new URLSearchParams({code: reportCode, fight_id: String(fightId), source_id: String(sourceId)});
+  async function fetchCPM(reportCode, fightIdOrIds, sourceId) {
+    const params = new URLSearchParams({code: reportCode, source_id: String(sourceId)});
+    if (typeof fightIdOrIds === 'string' && fightIdOrIds.includes(',')) {
+      params.set('fight_ids', fightIdOrIds);
+    } else if (fightIdOrIds != null) {
+      params.set('fight_id', String(fightIdOrIds));
+    }
     const r = await fetch(`/api/cpm?${params.toString()}`);
     if (!r.ok) {
       const text = await r.text();
@@ -411,7 +416,8 @@
     if (!grid) return;
     const pool = document.getElementById('undetected-pool');
     const reportCode = grid.dataset.reportCode;
-    const fightId = parseInt(grid.dataset.fightId, 10);
+    const fightId = parseInt(grid.dataset.fightId || '', 10);
+    let fightIdsStr = grid.dataset.fightIds || '';
     const preselect = grid.dataset.preselectSource ? parseInt(grid.dataset.preselectSource, 10) : null;
     const healerSelect = document.getElementById('healer-select');
 
@@ -459,7 +465,8 @@
         const status = document.getElementById('status');
         try {
           status.textContent = 'Calculating CPM…';
-          const data = await fetchCPM(reportCode, fightId, sourceId);
+          const fid = fightIdsStr && fightIdsStr.includes(',') ? fightIdsStr : (isFinite(fightId) ? fightId : fightIdsStr);
+          const data = await fetchCPM(reportCode, fid, sourceId);
           updateHeatmap(data);
           status.textContent = '';
           const sel = document.getElementById('selected-healer');
@@ -486,6 +493,23 @@
         selected = parseInt(healerSelect.value, 10);
       }
       if (selected) runFor(selected);
+    }
+
+    // Fight selection apply
+    const fightApply = document.getElementById('fight-apply');
+    const fightSelect = document.getElementById('fight-select');
+    if (fightApply && fightSelect) {
+      fightApply.addEventListener('click', () => {
+        const values = [...fightSelect.options].filter(o => o.selected).map(o => o.value);
+        fightIdsStr = values.join(',');
+        grid.dataset.fightIds = fightIdsStr;
+        const id = parseInt(document.getElementById('healer-select')?.value || '', 10);
+        if (isFinite(id)) {
+          const status = document.getElementById('status');
+          status.textContent = 'Calculating CPM…';
+          fetchCPM(reportCode, fightIdsStr, id).then((data) => { updateHeatmap(data); status.textContent=''; }).catch((err) => { console.error(err); status.textContent = 'Error: ' + (err.message || String(err)); });
+        }
+      });
     }
 
     // No auto-click; dropdown handles preselection

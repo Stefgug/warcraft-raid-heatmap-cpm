@@ -54,6 +54,7 @@ h1 { margin: 8px 0 4px; font-size: 20px; }
   border-radius: 12px;
   pointer-events: none;
   box-shadow: 0 0 14px rgba(245,158,11,0.55);
+  z-index: 2;
 }
 .raid-card.placeholder.drop-target {
   border-color: #f59e0b;
@@ -65,6 +66,7 @@ h1 { margin: 8px 0 4px; font-size: 20px; }
   border: 3px dashed #f59e0b;
   border-radius: 12px;
   pointer-events: none;
+  z-index: 2;
 }
 
 /* Hide Sortable's temporary ghost when dragging from pool into grid to avoid visual extra slot */
