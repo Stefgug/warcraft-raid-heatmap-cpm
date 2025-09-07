@@ -97,6 +97,8 @@ h1 { margin: 8px 0 4px; font-size: 20px; }
 /* OCR tools */
 .ocr-tools { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: start; margin: 8px 0 14px; }
 .ocr-label { display: block; margin-bottom: 6px; }
+.ocr-label { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.3px; }
+#selected-healer { font-size: 1.1rem; font-weight: 700; }
 .btn-primary { display:inline-block; padding:10px 14px; background: linear-gradient(90deg, #00e0ff, #37ffb0); color:#061018; border-radius:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; cursor:pointer; }
 .select-wrap { position: relative; display: grid; gap: 6px; }
 .styled-select { appearance: none; -webkit-appearance: none; -moz-appearance: none; padding: 10px 36px 10px 12px; background:#121a26; color:var(--fg); border:1px solid #2b3a4f; border-radius:10px; font-weight:600; cursor:pointer; }

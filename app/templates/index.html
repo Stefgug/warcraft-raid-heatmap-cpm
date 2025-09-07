@@ -45,9 +45,8 @@
               {% set seconds = ((f.duration_ms // 1000) % 60) %}
               <option value="{{ f.id }}" {% if f.id in selected_ids %}selected{% endif %}>
                 {{ f.name or ('Boss ' ~ f.boss) }}
-                {% if f.difficulty %} (Diff {{ f.difficulty }}){% endif %}
                 #{{ f.attempt_no }} —
-                {% if f.kill %}Kill{% else %}Wipe{% if f.wipe_pct is not none %} {{ '%.1f'|format(f.wipe_pct) }}%{% endif %}{% endif %}
+                {% if f.kill %}Kill{% else %}Wipe{% endif %}
                 — {{ '%d:%02d'|format(minutes, seconds) }}
               </option>
             {% endfor %}
