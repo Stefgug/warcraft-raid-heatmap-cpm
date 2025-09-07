@@ -20,9 +20,9 @@
       {% if fight_minutes is not none %}
       <div><strong>Duration:</strong> {{ '%.2f'|format(fight_minutes) }} min</div>
       {% endif %}
-      <div class="healer-picker">
+      <div class="healer-picker select-wrap">
         <label for="healer-select"><strong>Player:</strong></label>
-        <select id="healer-select">
+        <select id="healer-select" class="styled-select">
           {% if healers and healers|length > 0 %}
             {% for h in healers %}
               <option value="{{ h.id }}">{{ h.name }}</option>
@@ -38,12 +38,9 @@
     <div class="ocr-tools">
       <div class="ocr-col">
         <label for="ocr-upload" class="ocr-label"><strong>Auto arrange from screenshot:</strong></label>
-        <input id="ocr-upload" type="file" accept="image/*" />
-        
+        <input id="ocr-upload" type="file" accept="image/*" style="display:none" />
+        <label for="ocr-upload" class="btn-primary">Choose image…</label>
         <div id="ocr-status" class="status"></div>
-      </div>
-      <div class="ocr-col">
-        <canvas id="ocr-preview" width="0" height="0" style="max-width: 480px; width: 100%; height: auto; display: none; border: 1px solid #2a3242; border-radius: 6px;"></canvas>
       </div>
     </div>
 

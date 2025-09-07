@@ -95,6 +95,10 @@ h1 { margin: 8px 0 4px; font-size: 20px; }
 /* OCR tools */
 .ocr-tools { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: start; margin: 8px 0 14px; }
 .ocr-label { display: block; margin-bottom: 6px; }
+.btn-primary { display:inline-block; padding:10px 14px; background: linear-gradient(90deg, #00e0ff, #37ffb0); color:#061018; border-radius:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; cursor:pointer; }
+.select-wrap { position: relative; display: grid; gap: 6px; }
+.styled-select { appearance: none; -webkit-appearance: none; -moz-appearance: none; padding: 10px 36px 10px 12px; background:#121a26; color:var(--fg); border:1px solid #2b3a4f; border-radius:10px; font-weight:600; cursor:pointer; }
+.select-wrap::after { content: '▾'; position:absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #00e0ff; pointer-events: none; font-size: 16px; }
 .ocr-actions { display: flex; gap: 12px; margin-top: 8px; }
 .ocr-opt { color: var(--muted); font-size: 14px; }
 .ocr-col input[type="file"] { display: block; margin-top: 4px; }

@@ -274,9 +274,11 @@
             if (isPlaceholder(t)) {
               grid.replaceChild(dragged, t);
             } else {
-              const before = (typeof evt.oldIndex === 'number' && evt.oldIndex <= pool.children.length) ? pool.children[evt.oldIndex] : null;
+              // Insert displaced target (t) back into pool near the original index of dragged.
+              let before = (typeof evt.oldIndex === 'number' && evt.oldIndex < pool.children.length) ? pool.children[evt.oldIndex] : null;
+              if (before === dragged) before = dragged.nextSibling; // avoid inserting before itself
               if (t.parentElement === grid) grid.replaceChild(dragged, t);
-              pool.insertBefore(t, before);
+              if (before) pool.insertBefore(t, before); else pool.appendChild(t);
             }
             onAnyChange(); updatePoolVisibility(grid, pool);
           } catch (e) {
@@ -1024,8 +1026,8 @@
     });
 
     // Preprocess and preview
-    previewCanvas.style.display = 'block';
-    const canvas = preprocessToCanvas(img, opts.upscale, opts.threshold, previewCanvas);
+    if (previewCanvas) previewCanvas.style.display = 'none';
+    const canvas = preprocessToCanvas(img, opts.upscale, opts.threshold, previewCanvas || undefined);
 
     // OCR
     const roster = rosterFromGrid(grid);
@@ -1161,7 +1163,7 @@
     const fileInput = document.getElementById('ocr-upload');
     const statusEl = document.getElementById('ocr-status');
     const previewCanvas = document.getElementById('ocr-preview');
-    if (!fileInput || !previewCanvas) return;
+    if (!fileInput) return;
     // Ensure pool mirrors grid column layout for identical card sizing
     try {
       if (pool) {
@@ -1175,7 +1177,7 @@
       statusEl.textContent = 'Loading image…';
       const opts = { upscale: true, threshold: false, lexicon: true, percell: false };
       try {
-        await performOcrAndReorder(f, opts, grid, reportCode, fightId, statusEl, previewCanvas, pool);
+        await performOcrAndReorder(f, opts, grid, reportCode, fightId, statusEl, previewCanvas || null, pool);
       } catch (err) {
         console.error(err);
         statusEl.textContent = 'Recognition failed: ' + (err.message || String(err));
