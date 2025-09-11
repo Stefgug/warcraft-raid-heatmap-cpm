@@ -75,12 +75,12 @@ class WCLV1Client:
             except Exception:
                 continue
         if not fight_raw:
-            raise WCLV1APIError("Fight introuvable pour ce report (v1)")
+            raise WCLV1APIError("Fight not found for this report (v1)")
 
         st = fight_raw.get("start_time") or fight_raw.get("startTime")
         et = fight_raw.get("end_time") or fight_raw.get("endTime")
         if st is None or et is None:
-            raise WCLV1APIError("Champs start_time/end_time absents dans la réponse v1")
+            raise WCLV1APIError("Missing start_time/end_time fields in v1 response")
         fight = Fight(id=int(fight_raw.get("id")), startTime=int(st), endTime=int(et))
 
         # Derive the set of players that actually participated in this fight.

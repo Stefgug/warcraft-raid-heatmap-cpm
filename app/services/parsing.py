@@ -15,7 +15,7 @@ def parse_report_url(url: str) -> tuple[str, int]:
         https://www.warcraftlogs.com/reports/Dfrtw1FVPXm68L7C?fight=17&type=healing
     """
     if not url:
-        raise ParseError("URL vide")
+        raise ParseError("Empty URL")
 
     parsed = urlparse(url)
     # Path expected: /reports/{CODE}
@@ -24,20 +24,20 @@ def parse_report_url(url: str) -> tuple[str, int]:
         reports_idx = path_parts.index("reports")
         code = path_parts[reports_idx + 1]
     except (ValueError, IndexError) as e:
-        raise ParseError("Code de report introuvable dans l'URL fournie") from e
+        raise ParseError("Could not find report code in the provided URL") from e
 
     if not code:
-        raise ParseError("Code de report manquant")
+        raise ParseError("Missing report code")
 
     qs = parse_qs(parsed.query)
     fight_vals = qs.get("fight")
     if not fight_vals or not fight_vals[0]:
-        raise ParseError("Paramètre fight manquant dans l'URL")
+        raise ParseError("Missing 'fight' parameter in URL")
 
     try:
         fight_id = int(fight_vals[0])
     except ValueError as e:
-        raise ParseError("Paramètre fight invalide (entier attendu)") from e
+        raise ParseError("Invalid 'fight' parameter (expected integer)") from e
 
     return code, fight_id
 

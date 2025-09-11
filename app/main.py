@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     base = os.getenv("WCL_BASE", "https://www.warcraftlogs.com")
     v1_key = os.getenv("WCL_V1_API_KEY")
     if not v1_key:
-        raise RuntimeError("WCL_V1_API_KEY manquant dans .env — l'API v1 est requise.")
+        raise RuntimeError("WCL_V1_API_KEY missing in .env — v1 API key is required.")
     v1 = WCLV1Client(base, v1_key)
     app.state.wcl_v1 = v1
     try:

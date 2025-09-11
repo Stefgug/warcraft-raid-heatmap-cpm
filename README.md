@@ -1,87 +1,113 @@
----
-title: WCL Raid Heatmap (CPM)
-emoji: 🗺️
-colorFrom: blue
-colorTo: red
-sdk: docker
-app_port: 7860
-pinned: false
-license: mit
----
-
 # Warcraft Raid Heatmap (CPM)
 
-Application FastAPI minimale pour analyser un report Warcraft Logs (API v1) et afficher des raid frames colorées par CPM (casts par minute reçus d'un healer sélectionné). Roster strictement limité aux participants du combat sélectionné (pas de NPC/pets). Les cartes sont entièrement colorées selon l’intensité (meilleure lisibilité), et l’ordre peut être modifié par glisser‑déposer via une petite poignée.
+FastAPI application that analyzes a Warcraft Logs report (API v1) and renders a raid-frame heatmap colored by CPM (casts per minute) received by each player from a selected source. The roster is strictly limited to players who participated in the selected fight(s) — no NPCs or pets. The layout is fully color‑filled for readability and can be rearranged with drag‑and‑drop. Optional OCR can auto‑arrange the grid from a raid‑frames screenshot.
 
-## Prérequis
-- Python 3.12.9
-- [uv](https://github.com/astral-sh/uv) (optionnel mais recommandé)
-- Clé API Warcraft Logs v1 (pas d’OAuth requis)
+## Features
+- Heatmap by CPM: shows casts-per-minute received per player.
+- Multi‑fight aggregation: select one or multiple boss attempts; CPM aggregates over total minutes.
+- Player picker: choose the source (e.g., healer) whose casts are analyzed.
+- Drag‑and‑drop grid: reorder cards manually; order persists per report+fight in localStorage.
+- OCR auto‑arrange: upload a raid‑frames screenshot to auto‑position players (all in-browser via Tesseract.js).
+- No OAuth: uses Warcraft Logs API v1 key only.
+
+## Requirements
+- Python 3.12
+- Optional: [uv](https://github.com/astral-sh/uv) for fast dependency management
+- Warcraft Logs v1 API key (no OAuth)
 
 ## Configuration
-Créez un fichier `.env` à la racine du projet (ou utilisez celui déjà présent):
+Create a `.env` file at the project root (or edit the existing one):
 
 ```
 WCL_V1_API_KEY=your_v1_api_key
 WCL_BASE=https://www.warcraftlogs.com
 ```
 
-> Remarque: L’application est volontairement limitée à l’API v1 pour éviter tout flux d’authentification utilisateur.
+## Setup
 
-## Installation
+Using uv (recommended):
 
 ```bash
-cd warcraft-raid-heatmap
 uv sync
 ```
 
-## Démarrage (développement)
+Or with pip:
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Run (development)
 
 ```bash
 uv run uvicorn app.main:app --reload
 ```
 
-Ouvrez http://127.0.0.1:8000/ puis collez une URL de report, par ex.
+Open http://127.0.0.1:8000/ and paste a report URL, for example:
 
 ```
 https://www.warcraftlogs.com/reports/Dfrtw1FVPXm68L7C?fight=17&type=healing
 ```
 
-## Flux utilisateur
-- Étape A: Coller l’URL → bouton « Charger » (ex. `.../reports/XXXX?fight=117&type=healing&source=2127`).
-- Étape B: L’app affiche les joueurs du fight seulement (5 par ligne).
-- Étape C: Cliquer un joueur (healer) pour le sélectionner; la heatmap se met à jour.
-- Étape D: Optionnel — si l’URL contient `source=ID`, ce joueur est pré‑sélectionné automatiquement.
-- Étape E: Réordonner les cartes en faisant glisser la poignée `≡` en haut‑gauche de chaque carte. Le clic sur la carte sert à la sélection; la poignée sert au déplacement.
+## Usage
+- Paste a Warcraft Logs report URL and click Load.
+- Pick a player from the dropdown to compute the CPM heatmap.
+- Select one or multiple fights (left list) to aggregate CPM over several attempts.
+- Drag cards to rearrange the grid; layout is saved locally per report+fight.
+- Optionally, upload a raid‑frames screenshot to auto‑arrange the grid via OCR.
 
-## Drag-and-drop
-Le glisser‑déposer est natif (pas de dépendance externe) et fonctionne via une poignée dédiée, afin d’éviter les conflits avec le clic de sélection. L’ordre est persisté côté navigateur via `localStorage` (par report + fight).
+## API
 
-## Qualité & scripts
+The UI calls a single API endpoint you can reuse:
+
+GET `/api/cpm`
+
+Query parameters:
+- `code` (string): report code.
+- `source_id` (int): player ID whose casts are analyzed.
+- `fight_id` (int, optional): a single fight ID.
+- `fight_ids` (string, optional): comma‑separated list of fight IDs (overrides `fight_id`).
+
+Response (JSON):
+```
+{
+  "source_id": 2127,
+  "fight_minutes": 7.83,
+  "min": 0.11,
+  "max": 1.87,
+  "cpm_by_target": [ { "id": 123, "name": "Player", "value": 0.93 }, ... ]
+}
+```
+
+## Docker
+
+The repository includes a `Dockerfile` and `requirements.txt`.
+
+Example build and run:
+
+```bash
+docker build -t wcl-raid-heatmap .
+docker run --rm -p 8000:8000 \
+  -e WCL_V1_API_KEY=your_v1_api_key \
+  wcl-raid-heatmap
+```
+
+## Notes & Limitations
+- Warcraft Logs v1 may paginate events; the client follows `nextPageTimestamp`.
+- No database: layout persistence is local (per browser, per report+fight).
+- v1 payloads vary across logs; roster detection uses tolerant heuristics.
+
+## Development
+
+Useful commands:
 
 ```bash
 uv run ruff check .
 uv run black --check .
 uv run mypy .
-uv run pytest -q
 ```
-
-## Limitations connues
-- L’API v1 peut paginer les événements; le client gère `nextPageTimestamp` jusqu’à épuisement.
-- Pas de base de données; l’ordre des cartes (si DnD actif) est stocké côté navigateur.
-- Les payloads v1 varient selon les logs; le mapping est tolérant (participants détectés via `friendlyPlayers` ou `actor.fights`).
 
 ## License
 MIT
- 
-## Déploiement rapide (gratuit)
-
-- Hugging Face Spaces (Docker):
-  - Le repo contient `Dockerfile` et `requirements.txt` à la racine.
-  - Créez un Space (type Docker), connectez ce repo.
-  - Ajoutez le secret `WCL_V1_API_KEY` (et éventuellement `WCL_BASE`).
-  - Le service démarre sur `$PORT` automatiquement.
-
-- Render / Railway:
-  - Construire depuis `Dockerfile` ou bien utiliser: build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
-  - Définir `WCL_V1_API_KEY` dans les variables d’environnement.

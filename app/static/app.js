@@ -655,14 +655,14 @@
   let __ocrWorker = null;
   let __ocrDictKey = null;
   async function ensureWorker(roster, statusEl, useUserWords) {
-    if (typeof Tesseract === 'undefined') throw new Error('Tesseract.js non chargé');
+    if (typeof Tesseract === 'undefined') throw new Error('Tesseract.js not loaded');
     const dictKey = (roster || []).map(p => (p.name || '').trim()).sort().join('\n');
     if (__ocrWorker && __ocrDictKey === dictKey) return __ocrWorker;
     statusEl && (statusEl.textContent = 'Loading recognizer…');
 
     // Create or reuse worker
     if (!__ocrWorker) {
-      __ocrWorker = await Tesseract.createWorker('eng+fra', 1, {
+      __ocrWorker = await Tesseract.createWorker('eng', 1, {
         gzip: true,
         cacheMethod: 'none',
         logger: (m) => { if (statusEl) statusEl.textContent = `OCR: ${m.status || m.progress || ''}`; },
@@ -690,7 +690,7 @@
       });
     }
 
-    // Build and mount user-words for both languages (we load eng+fra)
+    // Build and mount user-words (English only)
     const words = [];
     for (const p of roster || []) {
       const n = String(p.name || '').trim();
@@ -706,10 +706,9 @@
         try { await __ocrWorker.FS('mkdir', '/tesseract'); } catch (_) {}
         try { await __ocrWorker.FS('mkdir', '/tesseract/tessdata'); } catch (_) {}
         await __ocrWorker.FS('writeFile', '/tesseract/tessdata/eng.user-words', content);
-        await __ocrWorker.FS('writeFile', '/tesseract/tessdata/fra.user-words', content);
         // Turn on user-words and reload worker. If this fails, we continue gracefully.
         try { await __ocrWorker.setParameters({ tessedit_load_user_words: '1' }); } catch (_) {}
-        await __ocrWorker.reinitialize('eng+fra', 1);
+        await __ocrWorker.reinitialize('eng', 1);
       } catch (e) {
         console.warn('User-words injection failed; continuing without hard lexicon', e);
         try { await __ocrWorker.setParameters({ tessedit_load_user_words: '0' }); } catch (_) {}
