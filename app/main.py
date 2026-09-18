@@ -61,9 +61,9 @@ NO_STORE_HEADERS = {"Cache-Control": "no-store, max-age=0"}
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
-            "request": request,
             "players": None,
             "report_code": None,
             "fight_id": None,
@@ -92,9 +92,9 @@ async def load_report(request: Request, report_url: str = Form(...)):
         code, sel = parse_report_any(report_url)
     except ParseError as e:
         return templates.TemplateResponse(
+            request,
             "index.html",
             {
-                "request": request,
                 "players": None,
                 "report_code": None,
                 "fight_id": None,
@@ -108,9 +108,9 @@ async def load_report(request: Request, report_url: str = Form(...)):
         fights_raw = await _client_v1(request).get_report_fights(code)
     except WCLV1APIError as e:
         return templates.TemplateResponse(
+            request,
             "index.html",
             {
-                "request": request,
                 "players": None,
                 "report_code": None,
                 "fight_id": None,
@@ -200,9 +200,9 @@ async def load_report(request: Request, report_url: str = Form(...)):
         paf = await _client_v1(request).get_players_and_fight(code, first_id)
     except Exception as e:
         return templates.TemplateResponse(
+            request,
             "index.html",
             {
-                "request": request,
                 "players": None,
                 "report_code": None,
                 "fight_id": None,
@@ -227,9 +227,9 @@ async def load_report(request: Request, report_url: str = Form(...)):
             total_minutes += fight_minutes(fr["start"], fr["end"])
 
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
-            "request": request,
             "players": paf.players,
             "report_code": code,
             "fight_id": selected_ids[0] if selected_ids else None,

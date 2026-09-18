@@ -1,4 +1,6 @@
 fastapi>=0.115.0
+# request-first Jinja2Templates.TemplateResponse signature (legacy form removed in starlette 1.x)
+starlette>=0.29.0
 uvicorn[standard]>=0.30.0
 httpx>=0.27.0
 jinja2>=3.1.3
